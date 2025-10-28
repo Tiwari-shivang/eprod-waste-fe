@@ -99,18 +99,52 @@ export const JobDetailsDrawer: React.FC<JobDetailsDrawerProps> = ({ open, onClos
           </Descriptions>
         </div>
 
-        <Divider />
-
-        {/* Waste Predictions */}
+        {/* AI Recommendations */}
         <div>
           <Title level={5}>
-            <ExperimentOutlined /> Waste Predictions
+            <ExperimentOutlined /> AI Recommendations
+          </Title>
+          <Card bordered={false} style={{ background: '#e6f4ff', borderLeft: '4px solid #1677ff' }}>
+            <Space direction="vertical" size={12} style={{ width: '100%' }}>
+              <div>
+                <Text strong style={{ fontSize: 14, color: '#0958d9' }}>
+                  {job.actionTitle}
+                </Text>
+                <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 4 }}>
+                  Confidence: {(job.actionConfidence * 100).toFixed(0)}%
+                </Text>
+              </div>
+              <Divider style={{ margin: '8px 0' }} />
+              <div>
+                <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
+                  Recommended Actions:
+                </Text>
+                <Space direction="vertical" size={6} style={{ width: '100%' }}>
+                  {job.actionSteps.slice(0, 4).map((step, idx) => (
+                    <div key={idx} style={{ padding: '6px 10px', background: '#fff', borderRadius: 4, border: '1px solid #d6e4ff' }}>
+                      <Text style={{ fontSize: 13 }}>
+                        {idx + 1}. {typeof step === 'string' ? step : step.step}
+                      </Text>
+                    </div>
+                  ))}
+                </Space>
+              </div>
+            </Space>
+          </Card>
+        </div>
+
+        <Divider />
+
+        {/* Waste Summary */}
+        <div>
+          <Title level={5}>
+            <ExperimentOutlined /> Waste Summary
           </Title>
           <Row gutter={[16, 16]}>
             <Col span={12}>
               <Card bordered={false} style={{ background: '#f6ffed' }}>
                 <Statistic
-                  title="Predicted Setup Waste"
+                  title="Predicted Total Waste"
                   value={job.predictedSetupWaste.toFixed(1)}
                   suffix="kg"
                   valueStyle={{ fontSize: 20, color: '#52c41a' }}
@@ -120,9 +154,9 @@ export const JobDetailsDrawer: React.FC<JobDetailsDrawerProps> = ({ open, onClos
             <Col span={12}>
               <Card bordered={false} style={{ background: '#fff7e6' }}>
                 <Statistic
-                  title="Predicted Dry-end Waste"
-                  value={job.predictedDryEndWaste.toFixed(2)}
-                  suffix="%"
+                  title="Actual Waste"
+                  value={job.predictedDryEndWaste.toFixed(1)}
+                  suffix="kg"
                   valueStyle={{ fontSize: 20, color: '#faad14' }}
                 />
               </Card>

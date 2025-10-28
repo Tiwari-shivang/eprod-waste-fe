@@ -1,8 +1,7 @@
 import React from 'react';
-import { Card, Table, Typography, Space, Tag } from 'antd';
+import { Card, Table, Typography, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { UpcomingJob } from '../../types';
-import { ClockCircleOutlined } from '@ant-design/icons';
 
 const { Text } = Typography;
 
@@ -17,11 +16,11 @@ export const UpcomingJobsTable: React.FC<UpcomingJobsTableProps> = ({ jobs, onJo
       title: 'Job ID',
       dataIndex: 'jobId',
       key: 'jobId',
-      width: 200,
+      width: 180,
       ellipsis: true,
       render: (text: string) => (
         <Text
-          style={{ cursor: 'pointer', color: '#1677ff' }}
+          style={{ cursor: 'pointer', color: '#1677ff', fontWeight: 500 }}
           onClick={() => onJobClick?.(text)}
         >
           {text}
@@ -32,34 +31,38 @@ export const UpcomingJobsTable: React.FC<UpcomingJobsTableProps> = ({ jobs, onJo
       title: 'Paper Grade',
       dataIndex: 'paperGrade',
       key: 'paperGrade',
+      width: 140,
       ellipsis: true,
     },
     {
-      title: 'Flute',
+      title: 'Flute Type',
       dataIndex: 'flute',
       key: 'flute',
-      width: 80,
+      width: 90,
       align: 'center',
+      render: (text: string) => (
+        <Tag color="blue">{text}</Tag>
+      ),
     },
     {
-      title: 'ETA',
-      dataIndex: 'eta',
-      key: 'eta',
+      title: 'Operator',
+      dataIndex: 'operator',
+      key: 'operator',
+      width: 150,
+      ellipsis: true,
+    },
+    {
+      title: 'Thickness',
+      dataIndex: 'thickness',
+      key: 'thickness',
       width: 100,
       align: 'center',
-      render: (value: number) => (
-        <Space size={4}>
-          <ClockCircleOutlined style={{ color: '#1677ff' }} />
-          <Text>{value} min</Text>
-        </Space>
-      ),
-      sorter: (a, b) => a.eta - b.eta,
     },
     {
-      title: 'Changeover',
+      title: 'Change Over',
       dataIndex: 'changeoverDuration',
       key: 'changeoverDuration',
-      width: 120,
+      width: 110,
       align: 'center',
       render: (value: number) => (
         <Tag color="processing">{value} min</Tag>
@@ -69,19 +72,29 @@ export const UpcomingJobsTable: React.FC<UpcomingJobsTableProps> = ({ jobs, onJo
     {
       title: 'Expected Waste',
       key: 'expectedWaste',
-      width: 150,
+      width: 140,
       align: 'center',
       render: (_, record) => (
-        <Text type="secondary" style={{ fontSize: 12 }}>
-          {record.expectedWasteLow.toFixed(0)} - {record.expectedWasteHigh.toFixed(0)} kg
+        <Text strong style={{ fontSize: 13, color: '#faad14' }}>
+          {record.expectedWasteLow.toFixed(0)}-{record.expectedWasteHigh.toFixed(0)} kg
         </Text>
       ),
     },
   ];
 
   return (
-    <Card title="Upcoming Jobs" bordered={false}>
+    <Card title="Upcoming Jobs" bordered={false} style={{ boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)' }}>
+      <style>{`
+        .upcoming-jobs-table .ant-table-tbody > tr > td {
+          padding: 8px 12px !important;
+        }
+        .upcoming-jobs-table .ant-table-thead > tr > th {
+          padding: 10px 12px !important;
+          font-weight: 600;
+        }
+      `}</style>
       <Table
+        className="upcoming-jobs-table"
         columns={columns}
         dataSource={jobs}
         rowKey="jobId"
@@ -91,7 +104,7 @@ export const UpcomingJobsTable: React.FC<UpcomingJobsTableProps> = ({ jobs, onJo
           showSizeChanger: false,
         }}
         size="small"
-        scroll={{ x: 800 }}
+        scroll={{ x: 950 }}
       />
     </Card>
   );

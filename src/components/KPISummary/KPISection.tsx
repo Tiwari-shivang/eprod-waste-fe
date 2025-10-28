@@ -1,65 +1,30 @@
 import React from 'react';
 import { Row, Col, Card } from 'antd';
-import {
-  DeleteOutlined,
-  AlertOutlined,
-  DisconnectOutlined,
-  BarChartOutlined,
-} from '@ant-design/icons';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { MetricCard } from '../shared';
-import type { KPIData, KPIChartData } from '../../types';
+import { InProgressJobsTable } from '../JobTables';
+import type { KPIChartData, InProgressJob } from '../../types';
 
 interface KPISectionProps {
-  kpiData: KPIData;
   chartData: KPIChartData[];
+  inProgressJobs: InProgressJob[];
+  onJobClick?: (jobId: string) => void;
+  onViewAll?: () => void;
 }
 
-export const KPISection: React.FC<KPISectionProps> = ({ kpiData, chartData }) => {
+export const KPISection: React.FC<KPISectionProps> = ({ chartData, inProgressJobs, onJobClick, onViewAll }) => {
+  const cardHeight = 480; // Fixed height for both sides
+
   return (
     <div style={{ marginBottom: 24 }}>
       <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} lg={6}>
-          <MetricCard
-            title="Total Waste Saved"
-            value={kpiData.totalWasteSaved.toFixed(0)}
-            suffix="kg"
-            trend={kpiData.wasteSavedPercentage}
-            icon={<DeleteOutlined />}
-            color="#52c41a"
-          />
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <MetricCard
-            title="Active Alerts"
-            value={kpiData.activeAlerts}
-            icon={<AlertOutlined />}
-            color="#faad14"
-          />
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <MetricCard
-            title="Offline Events"
-            value={kpiData.offlineEvents}
-            icon={<DisconnectOutlined />}
-            color="#ff4d4f"
-          />
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <MetricCard
-            title="AI Accuracy"
-            value={kpiData.avgAccuracy.toFixed(0)}
-            suffix="%"
-            icon={<BarChartOutlined />}
-            color="#1677ff"
-          />
-        </Col>
-      </Row>
-
-      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-        <Col xs={24}>
-          <Card title="KPI Summary - Waste Trend" bordered={false}>
-            <ResponsiveContainer width="100%" height={300}>
+        {/* Left side - Waste Trend Chart */}
+        <Col xs={24} lg={12}>
+          <Card
+            title="KPI Summary - Waste Trend"
+            bordered={false}
+            style={{ boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)', height: cardHeight }}
+          >
+            <ResponsiveContainer width="100%" height={cardHeight - 90}>
               <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis
@@ -86,25 +51,38 @@ export const KPISection: React.FC<KPISectionProps> = ({ kpiData, chartData }) =>
                 <Line
                   type="monotone"
                   dataKey="waste"
-                  stroke="#1677ff"
-                  strokeWidth={2}
-                  dot={{ r: 4 }}
+                  stroke="#2563eb"
+                  strokeWidth={3}
+                  dot={{ r: 5, fill: '#2563eb', strokeWidth: 2, stroke: '#fff' }}
                   name="Actual Waste"
-                  activeDot={{ r: 6 }}
+                  activeDot={{ r: 7, fill: '#2563eb' }}
                 />
                 <Line
                   type="monotone"
                   dataKey="predicted"
-                  stroke="#52c41a"
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  dot={{ r: 4 }}
+                  stroke="#10b981"
+                  strokeWidth={3}
+                  strokeDasharray="8 4"
+                  dot={{ r: 5, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }}
                   name="Predicted Waste"
-                  activeDot={{ r: 6 }}
+                  activeDot={{ r: 7, fill: '#10b981' }}
                 />
               </LineChart>
             </ResponsiveContainer>
           </Card>
+        </Col>
+
+        {/* Right side - In-Progress Jobs Table */}
+        <Col xs={24} lg={12}>
+          <div style={{ height: cardHeight }}>
+            <InProgressJobsTable
+              jobs={inProgressJobs}
+              onJobClick={onJobClick}
+              onViewAll={onViewAll}
+              pageSize={5}
+              showCard={true}
+            />
+          </div>
         </Col>
       </Row>
     </div>

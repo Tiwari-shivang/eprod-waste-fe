@@ -101,10 +101,11 @@ export interface HistoricalJob {
   jobId: string;
   waste: number;
   saved: number;
-  confidence: number;
   timestamp: string;
   paperGrade: string;
   eventType: string;
+  operator: string;
+  shiftTime: string;
 }
 
 export interface InProgressJob {
@@ -120,6 +121,8 @@ export interface UpcomingJob {
   jobId: string;
   paperGrade: string;
   flute: string;
+  operator: string;
+  thickness: string;
   eta: number;
   changeoverDuration: number;
   expectedWasteLow: number;

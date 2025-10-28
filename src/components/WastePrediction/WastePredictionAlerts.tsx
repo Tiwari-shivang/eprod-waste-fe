@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, List, Tag, Space, Typography, Badge, Empty } from 'antd';
+import { List, Tag, Space, Typography, Empty } from 'antd';
 import {
   WarningOutlined,
   ExclamationCircleOutlined,
@@ -39,16 +39,7 @@ export const WastePredictionAlerts: React.FC<WastePredictionAlertsProps> = ({ al
   };
 
   return (
-    <Card
-      title={
-        <Space>
-          <WarningOutlined />
-          Waste Prediction & Alerts
-          <Badge count={alerts.length} style={{ backgroundColor: '#ff4d4f' }} />
-        </Space>
-      }
-      bordered={false}
-    >
+    <>
       {alerts.length === 0 ? (
         <Empty
           image={<CheckCircleOutlined style={{ fontSize: 48, color: '#52c41a' }} />}
@@ -112,6 +103,6 @@ export const WastePredictionAlerts: React.FC<WastePredictionAlertsProps> = ({ al
           )}
         />
       )}
-    </Card>
+    </>
   );
 };

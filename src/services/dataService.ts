@@ -38,56 +38,79 @@ const allLogs = parseCSV(csvData);
 // Real-world operator names
 const OPERATORS = ['John Martinez', 'Sarah Chen', 'Michael Okonkwo', 'Priya Sharma', 'David Rodriguez'];
 
-// Session-based data indices for realistic cycling
-let currentJobIndex = Math.floor(Math.random() * Math.min(allLogs.length, 100));
-let operatorIndex = 0;
-
-// Get current running job with realistic cycling
-export const getCurrentJob = (): CurrentJob => {
-  // Cycle through running jobs for variety
-  const runningJobs = allLogs.filter(log => log.event_type === 'run');
-  if (runningJobs.length === 0) {
-    currentJobIndex = 0;
-  } else {
-    currentJobIndex = (currentJobIndex + 1) % runningJobs.length;
-  }
-
-  const latestJob = runningJobs[currentJobIndex] || allLogs[0];
-
+// Helper function to convert log to CurrentJob
+const convertToCurrentJob = (log: CorrugatorLog, index: number): CurrentJob => {
   // Cycle through operators
-  operatorIndex = (operatorIndex + 1) % OPERATORS.length;
-  const operator = OPERATORS[operatorIndex];
+  const operator = OPERATORS[index % OPERATORS.length];
 
-  // Parse action steps JSON
+  // Parse action steps JSON and enhance with additional suggestions
   let actionSteps = [];
   try {
-    actionSteps = JSON.parse(latestJob.action_steps_json || '[]');
+    const parsedSteps = JSON.parse(log.action_steps_json || '[]');
+    actionSteps = parsedSteps.length > 0 ? parsedSteps : [];
   } catch (e) {
     actionSteps = [];
   }
 
+  // Add more detailed action steps if the original list is empty or has few items
+  if (actionSteps.length < 3) {
+    actionSteps = [
+      { step: 'Adjust steam temperature to optimal range', delta_c: log.candidate_steam_c - log.steam_c },
+      { step: 'Optimize machine speed for current material', delta_mpm: log.candidate_speed_mpm - log.speed_mpm },
+      { step: 'Fine-tune glue gap for better adhesion', delta_c: 0 },
+      { step: 'Monitor edge alignment sensors continuously' },
+      { step: 'Verify moisture content is within spec range' },
+      { step: 'Check wrap arm positioning for consistency' },
+    ];
+  }
+
+  // Filter out NaN values and ensure valid numbers
+  const safeNumber = (value: any, fallback: number = 0): number => {
+    return (typeof value === 'number' && !isNaN(value)) ? value : fallback;
+  };
+
   // Realistic completion percentage that increases over time
-  const baseCompletion = 65 + (currentJobIndex % 30);
+  const baseCompletion = 65 + (index % 30);
   const completion = Math.min(95, baseCompletion);
 
+  // Convert dry end waste percentage to kg (assuming average production rate)
+  // Typical corrugator produces 150-200 meters/min, let's estimate waste in kg
+  const dryEndWasteKg = safeNumber(log.predicted_dry_end_waste_pct) * safeNumber(log.speed_mpm) * 0.8;
+
   return {
-    jobId: latestJob.job_id,
-    jobName: `${latestJob.paper_grade} - ${latestJob.flute}`,
+    jobId: log.job_id || `JOB-${index}`,
+    jobName: `${log.paper_grade || 'Unknown'} - ${log.flute || 'C'}`,
     operatorId: operator,
     completion: completion,
-    wasteRisk: Math.min(latestJob.predicted_dry_end_waste_pct * 25, 100),
-    paperGrade: latestJob.paper_grade,
-    flute: latestJob.flute,
-    thickness: `${latestJob.paper_grade.match(/\d+/)?.[0] || '140'}gsm`,
-    predictedSetupWaste: latestJob.predicted_setup_waste_kg,
-    predictedDryEndWaste: latestJob.predicted_dry_end_waste_pct,
-    speed: latestJob.speed_mpm,
-    steam: latestJob.steam_c,
-    eventType: latestJob.event_type,
-    actionConfidence: latestJob.action_confidence,
-    actionTitle: latestJob.action_title,
+    wasteRisk: Math.min(safeNumber(log.predicted_dry_end_waste_pct) * 25, 100),
+    paperGrade: log.paper_grade || 'Unknown',
+    flute: log.flute || 'C',
+    thickness: `${log.paper_grade?.match(/\d+/)?.[0] || '140'}gsm`,
+    predictedSetupWaste: safeNumber(log.predicted_setup_waste_kg, 85),
+    predictedDryEndWaste: safeNumber(dryEndWasteKg, 45),
+    speed: safeNumber(log.speed_mpm, 150),
+    steam: safeNumber(log.steam_c, 180),
+    eventType: log.event_type || 'run',
+    actionConfidence: safeNumber(log.action_confidence, 0.75),
+    actionTitle: log.action_title || 'Optimize current settings for waste reduction',
     actionSteps: actionSteps,
   };
+};
+
+// Get all running jobs for manual navigation
+export const getAllRunningJobs = (): CurrentJob[] => {
+  const runningJobs = allLogs.filter(log => log.event_type === 'run');
+
+  // Return up to 10 running jobs for navigation
+  return runningJobs.slice(0, Math.min(10, runningJobs.length)).map((log, index) => {
+    return convertToCurrentJob(log, index);
+  });
+};
+
+// Get current running job with realistic cycling (deprecated - kept for backward compatibility)
+export const getCurrentJob = (): CurrentJob => {
+  const allJobs = getAllRunningJobs();
+  return allJobs[0] || convertToCurrentJob(allLogs[0], 0);
 };
 
 // Get historical jobs (completed jobs) with real data variety
@@ -97,26 +120,61 @@ export const getHistoricalJobs = (): HistoricalJob[] => {
 
   return setupAndAdjustJobs
     .slice(startIndex)
-    .map(log => ({
-      jobId: log.job_id,
-      waste: log.predicted_setup_waste_kg,
-      saved: log.action_effect_waste_saved_kg,
-      confidence: log.action_confidence,
-      timestamp: log.ts,
-      paperGrade: log.paper_grade,
-      eventType: log.event_type,
-    }))
+    .map((log, index) => {
+      // Generate shift time from timestamp or use provided shift times
+      const startTime = log.start_shift_time || new Date(log.ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+      const endDate = new Date(new Date(log.ts).getTime() + 2 * 60 * 60 * 1000); // Add 2 hours
+      const endTime = log.end_shift_time || endDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+      const shiftTime = `${startTime} - ${endTime}`;
+
+      return {
+        jobId: log.job_id,
+        waste: log.predicted_setup_waste_kg,
+        saved: log.action_effect_waste_saved_kg,
+        timestamp: log.ts,
+        paperGrade: log.paper_grade,
+        eventType: log.event_type,
+        operator: OPERATORS[index % OPERATORS.length],
+        shiftTime: shiftTime,
+      };
+    })
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
     .slice(0, 10);
 };
 
-// Get in-progress jobs with realistic progression
+// Get ALL historical jobs for the modal
+export const getAllHistoricalJobs = (): HistoricalJob[] => {
+  const setupAndAdjustJobs = allLogs.filter(log => log.event_type === 'setup' || log.event_type === 'adjust');
+
+  return setupAndAdjustJobs
+    .map((log, index) => {
+      // Generate shift time from timestamp or use provided shift times
+      const startTime = log.start_shift_time || new Date(log.ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+      const endDate = new Date(new Date(log.ts).getTime() + 2 * 60 * 60 * 1000); // Add 2 hours
+      const endTime = log.end_shift_time || endDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+      const shiftTime = `${startTime} - ${endTime}`;
+
+      return {
+        jobId: log.job_id,
+        waste: log.predicted_setup_waste_kg,
+        saved: log.action_effect_waste_saved_kg,
+        timestamp: log.ts,
+        paperGrade: log.paper_grade,
+        eventType: log.event_type,
+        operator: OPERATORS[index % OPERATORS.length],
+        shiftTime: shiftTime,
+      };
+    })
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+};
+
+// Get in-progress jobs with realistic progression (matches Current Job section data)
 export const getInProgressJobs = (): InProgressJob[] => {
   const runningJobs = allLogs.filter(log => log.event_type === 'run');
-  const startIndex = Math.max(0, runningJobs.length - 8);
 
+  // Use the same first 10 jobs as Current Job section for consistency
   return runningJobs
-    .slice(startIndex)
+    .slice(0, Math.min(10, runningJobs.length))
     .map((log, idx) => {
       const baseProgress = 25 + (idx * 10);
       const completion = Math.min(85, baseProgress + Math.floor(Math.random() * 15));
@@ -129,27 +187,91 @@ export const getInProgressJobs = (): InProgressJob[] => {
         flute: log.flute,
         wasteRisk: Math.min(log.predicted_dry_end_waste_pct * 22, 100),
       };
-    })
-    .slice(0, 6);
+    });
 };
 
-// Get upcoming jobs with real scheduling data
-export const getUpcomingJobs = (): UpcomingJob[] => {
-  const jobsWithNext = allLogs.filter(log => log.next_job_id && log.next_paper_grade);
-  const startIndex = Math.max(0, jobsWithNext.length - 8);
+// Get ALL in-progress jobs for the modal (matches Current Job section data)
+export const getAllInProgressJobs = (): InProgressJob[] => {
+  const runningJobs = allLogs.filter(log => log.event_type === 'run');
 
-  return jobsWithNext
-    .slice(startIndex)
-    .map(log => ({
-      jobId: log.next_job_id,
-      paperGrade: log.next_paper_grade,
-      flute: log.next_flute,
-      eta: log.changeover_eta_min,
-      changeoverDuration: Math.floor(log.changeover_eta_min * 0.65),
-      expectedWasteLow: log.expected_setup_waste_kg_low,
-      expectedWasteHigh: log.expected_setup_waste_kg_high,
-    }))
-    .slice(0, 5);
+  // Use same jobs as Current Job section
+  return runningJobs
+    .slice(0, Math.min(10, runningJobs.length))
+    .map((log, idx) => {
+      const baseProgress = 25 + (idx * 10);
+      const completion = Math.min(85, baseProgress + Math.floor(Math.random() * 15));
+
+      return {
+        jobId: log.job_id,
+        paperGrade: log.paper_grade,
+        completion: completion,
+        progress: completion,
+        flute: log.flute,
+        wasteRisk: Math.min(log.predicted_dry_end_waste_pct * 22, 100),
+      };
+    });
+};
+
+// Get upcoming jobs - using running jobs as upcoming jobs
+export const getUpcomingJobs = (): UpcomingJob[] => {
+  const runningJobs = allLogs.filter(log => log.event_type === 'run');
+
+  // Get some running jobs to show as upcoming
+  const startIndex = Math.max(0, runningJobs.length - 10);
+  const selectedJobs = runningJobs.slice(startIndex, startIndex + 5);
+
+  // Ensure at least 3 jobs with realistic mock data if not enough
+  const mockJobs: UpcomingJob[] = [
+    {
+      jobId: 'JOB-2024-001',
+      paperGrade: 'K150',
+      flute: 'B',
+      operator: 'Sarah Chen',
+      thickness: '150gsm',
+      eta: 25,
+      changeoverDuration: 12,
+      expectedWasteLow: 75,
+      expectedWasteHigh: 95,
+    },
+    {
+      jobId: 'JOB-2024-002',
+      paperGrade: 'T140',
+      flute: 'C',
+      operator: 'Michael Okonkwo',
+      thickness: '140gsm',
+      eta: 45,
+      changeoverDuration: 15,
+      expectedWasteLow: 80,
+      expectedWasteHigh: 105,
+    },
+    {
+      jobId: 'JOB-2024-003',
+      paperGrade: 'K175',
+      flute: 'E',
+      operator: 'Priya Sharma',
+      thickness: '175gsm',
+      eta: 65,
+      changeoverDuration: 10,
+      expectedWasteLow: 65,
+      expectedWasteHigh: 85,
+    },
+  ];
+
+  const upcomingFromLogs = selectedJobs.map((log, idx) => ({
+    jobId: log.job_id,
+    paperGrade: log.paper_grade,
+    flute: log.flute,
+    operator: OPERATORS[(idx + 2) % OPERATORS.length],
+    thickness: `${log.paper_grade?.match(/\d+/)?.[0] || '140'}gsm`,
+    eta: (idx + 1) * 20 + Math.floor(Math.random() * 15), // Random ETA
+    changeoverDuration: Math.floor(Math.random() * 10) + 8, // 8-18 minutes
+    expectedWasteLow: Math.floor(log.predicted_setup_waste_kg * 0.8),
+    expectedWasteHigh: Math.floor(log.predicted_setup_waste_kg * 1.2),
+  }));
+
+  // Combine mock jobs with log jobs, ensure at least 3 rows
+  const combinedJobs = [...mockJobs, ...upcomingFromLogs];
+  return combinedJobs.slice(0, Math.max(3, selectedJobs.length + 3));
 };
 
 // Get KPI data with realistic calculations
@@ -207,18 +329,33 @@ export const getWasteAlerts = (): WasteAlert[] => {
 export const getKPIChartData = (): KPIChartData[] => {
   const chartLogs = allLogs.slice(-25);
 
-  return chartLogs.map(log => ({
-    time: new Date(log.ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-    waste: Math.round(log.predicted_setup_waste_kg * 10) / 10,
-    predicted: Math.round(log.forecast_setup_waste_kg_mean * 10) / 10,
-  }));
+  return chartLogs.map((log) => {
+    // Use forecast as base predicted value
+    const predictedBase = log.forecast_setup_waste_kg_mean || log.predicted_setup_waste_kg;
+
+    // Make difference exactly 10-20 kg between actual and predicted
+    // 50% chance predicted is higher, 50% chance actual is higher
+    const difference = 10 + Math.random() * 10; // Random value between 10-20 kg
+    const actualWaste = Math.random() > 0.5
+      ? predictedBase + difference  // 50% chance: actual is 10-20kg higher
+      : predictedBase - difference;  // 50% chance: actual is 10-20kg lower
+
+    return {
+      time: new Date(log.ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      waste: Math.round(actualWaste * 10) / 10,
+      predicted: Math.round(predictedBase * 10) / 10,
+    };
+  });
 };
 
 // Simulated API calls
 export const dashboardAPI = {
   getCurrentJob: () => Promise.resolve(getCurrentJob()),
+  getAllRunningJobs: () => Promise.resolve(getAllRunningJobs()),
   getHistoricalJobs: () => Promise.resolve(getHistoricalJobs()),
+  getAllHistoricalJobs: () => Promise.resolve(getAllHistoricalJobs()),
   getInProgressJobs: () => Promise.resolve(getInProgressJobs()),
+  getAllInProgressJobs: () => Promise.resolve(getAllInProgressJobs()),
   getUpcomingJobs: () => Promise.resolve(getUpcomingJobs()),
   getKPIData: () => Promise.resolve(getKPIData()),
   getWasteAlerts: () => Promise.resolve(getWasteAlerts()),

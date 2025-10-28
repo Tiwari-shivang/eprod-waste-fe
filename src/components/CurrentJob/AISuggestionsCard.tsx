@@ -11,16 +11,18 @@ interface AISuggestionsCardProps {
 
 export const AISuggestionsCard: React.FC<AISuggestionsCardProps> = ({ job }) => {
   const formatSuggestion = (step: any): string => {
-    let suggestion = step.step;
+    let suggestion = step.step || 'No step description';
 
-    if (step.delta_c !== undefined) {
+    // Check for valid delta_c (not NaN, not undefined, not 0)
+    if (step.delta_c !== undefined && !isNaN(step.delta_c) && Math.abs(step.delta_c) > 0.1) {
       const direction = step.delta_c > 0 ? 'increase' : 'decrease';
-      suggestion += ` (${direction} by ${Math.abs(step.delta_c)}°C)`;
+      suggestion += ` (${direction} by ${Math.abs(step.delta_c).toFixed(1)}°C)`;
     }
 
-    if (step.delta_mpm !== undefined) {
+    // Check for valid delta_mpm (not NaN, not undefined, not 0)
+    if (step.delta_mpm !== undefined && !isNaN(step.delta_mpm) && Math.abs(step.delta_mpm) > 0.1) {
       const direction = step.delta_mpm > 0 ? 'increase' : 'decrease';
-      suggestion += ` (${direction} by ${Math.abs(step.delta_mpm)} m/min)`;
+      suggestion += ` (${direction} by ${Math.abs(step.delta_mpm).toFixed(1)} m/min)`;
     }
 
     return suggestion;
@@ -29,7 +31,11 @@ export const AISuggestionsCard: React.FC<AISuggestionsCardProps> = ({ job }) => 
   return (
     <Card
       bordered={false}
-      style={{ height: '100%', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+      style={{
+        height: '100%',
+        background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
+        boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)'
+      }}
     >
       <Space direction="vertical" size={16} style={{ width: '100%' }}>
         <div style={{ textAlign: 'center' }}>

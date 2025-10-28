@@ -1,16 +1,26 @@
 import React from 'react';
-import { Card, Table, Progress, Typography, Space, Tag } from 'antd';
+import { Card, Table, Progress, Typography, Space, Tag, Button } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { InProgressJob } from '../../types';
+import { EyeOutlined } from '@ant-design/icons';
 
 const { Text } = Typography;
 
 interface InProgressJobsTableProps {
   jobs: InProgressJob[];
   onJobClick?: (jobId: string) => void;
+  onViewAll?: () => void;
+  pageSize?: number;
+  showCard?: boolean;
 }
 
-export const InProgressJobsTable: React.FC<InProgressJobsTableProps> = ({ jobs, onJobClick }) => {
+export const InProgressJobsTable: React.FC<InProgressJobsTableProps> = ({
+  jobs,
+  onJobClick,
+  onViewAll,
+  pageSize = 5,
+  showCard = true
+}) => {
   const getRiskColor = (risk: number) => {
     if (risk < 30) return 'success';
     if (risk < 60) return 'warning';
@@ -79,20 +89,46 @@ export const InProgressJobsTable: React.FC<InProgressJobsTableProps> = ({ jobs, 
     },
   ];
 
+  const tableContent = (
+    <Table
+      columns={columns}
+      dataSource={jobs}
+      rowKey="jobId"
+      pagination={{
+        pageSize: pageSize,
+        size: 'small',
+        showSizeChanger: true,
+        showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} jobs`,
+        pageSizeOptions: ['10', '20', '50', '100'],
+      }}
+      size="small"
+      scroll={{ x: 600, y: showCard ? 300 : undefined }}
+    />
+  );
+
+  if (!showCard) {
+    return tableContent;
+  }
+
   return (
-    <Card title="In-Progress Jobs" bordered={false}>
-      <Table
-        columns={columns}
-        dataSource={jobs}
-        rowKey="jobId"
-        pagination={{
-          pageSize: 5,
-          size: 'small',
-          showSizeChanger: false,
-        }}
-        size="small"
-        scroll={{ x: 600 }}
-      />
+    <Card
+      title="In-Progress Jobs"
+      bordered={false}
+      style={{ boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)', height: '100%' }}
+      extra={
+        onViewAll && (
+          <Button
+            type="primary"
+            icon={<EyeOutlined />}
+            onClick={onViewAll}
+            size="small"
+          >
+            View All
+          </Button>
+        )
+      }
+    >
+      {tableContent}
     </Card>
   );
 };
