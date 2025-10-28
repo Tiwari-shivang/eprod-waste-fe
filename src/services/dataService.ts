@@ -329,9 +329,13 @@ export const getWasteAlerts = (): WasteAlert[] => {
 export const getKPIChartData = (): KPIChartData[] => {
   const chartLogs = allLogs.slice(-25);
 
-  return chartLogs.map((log) => {
-    // Use forecast as base predicted value
-    const predictedBase = log.forecast_setup_waste_kg_mean || log.predicted_setup_waste_kg;
+  return chartLogs.map((log, index) => {
+    // Generate predicted values in range 500-1000 kg
+    // Use a base value with some variation to create realistic trend
+    const baseValue = 700; // Middle of range
+    const variation = Math.sin(index * 0.5) * 150; // Creates wave pattern
+    const randomNoise = (Math.random() - 0.5) * 100; // Random variation
+    const predictedBase = baseValue + variation + randomNoise;
 
     // Make difference exactly 10-20 kg between actual and predicted
     // 50% chance predicted is higher, 50% chance actual is higher
