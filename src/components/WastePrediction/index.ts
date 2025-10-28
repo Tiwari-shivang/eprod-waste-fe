@@ -1,0 +1,1 @@
+export { WastePredictionAlerts } from './WastePredictionAlerts';
