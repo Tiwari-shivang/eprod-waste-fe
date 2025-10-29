@@ -149,6 +149,7 @@ export interface KPIData {
 export interface WasteAlert {
   id: string;
   jobId: string;
+  jobName: string;
   severity: 'high' | 'medium' | 'low';
   message: string;
   timestamp: string;

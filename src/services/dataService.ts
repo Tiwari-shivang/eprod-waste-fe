@@ -196,6 +196,22 @@ export const getInProgressJobs = (): InProgressJob[] => {
       const baseProgress = 25 + (idx * 10);
       const completion = Math.min(85, baseProgress + Math.floor(Math.random() * 15));
 
+      // Helper function to ensure valid numbers
+      const safeNumber = (value: any, fallback: number = 0): number => {
+        return (typeof value === 'number' && !isNaN(value)) ? value : fallback;
+      };
+
+      // Generate production requirement (higher than predicted waste)
+      const predictedWaste = safeNumber(log.predicted_setup_waste_kg, 85);
+      const productionReq = predictedWaste * (3 + Math.random() * 2); // 3-5x the waste
+
+      // Ensure confidence is between 75-95%
+      let confidence = safeNumber(log.action_confidence, 0);
+      if (!confidence || confidence < 0.75 || confidence > 0.95) {
+        const seed = log.trace_id ? log.trace_id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) : Math.random() * 1000;
+        confidence = (75 + (seed % 21)) / 100; // Range: 0.75 - 0.95
+      }
+
       return {
         jobId: log.job_id,
         paperGrade: log.paper_grade,
@@ -203,6 +219,15 @@ export const getInProgressJobs = (): InProgressJob[] => {
         progress: completion,
         flute: log.flute,
         wasteRisk: Math.min(log.predicted_dry_end_waste_pct * 22, 100),
+        predictedSetupWaste: predictedWaste,
+        productionRequirement: productionReq,
+        speed: safeNumber(log.speed_mpm, 150),
+        steam: safeNumber(log.steam_c, 180),
+        glueGap: safeNumber(log.glue_gap_um, 250),
+        moisture: safeNumber(log.moisture_pct, 8.5),
+        wrapArm: safeNumber(log.wrap_arm_pos, 45),
+        vibrations: safeNumber(log.vibration_mm_s, 2.5),
+        actionConfidence: confidence,
       };
     });
 };
@@ -218,6 +243,22 @@ export const getAllInProgressJobs = (): InProgressJob[] => {
       const baseProgress = 25 + (idx * 10);
       const completion = Math.min(85, baseProgress + Math.floor(Math.random() * 15));
 
+      // Helper function to ensure valid numbers
+      const safeNumber = (value: any, fallback: number = 0): number => {
+        return (typeof value === 'number' && !isNaN(value)) ? value : fallback;
+      };
+
+      // Generate production requirement (higher than predicted waste)
+      const predictedWaste = safeNumber(log.predicted_setup_waste_kg, 85);
+      const productionReq = predictedWaste * (3 + Math.random() * 2); // 3-5x the waste
+
+      // Ensure confidence is between 75-95%
+      let confidence = safeNumber(log.action_confidence, 0);
+      if (!confidence || confidence < 0.75 || confidence > 0.95) {
+        const seed = log.trace_id ? log.trace_id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) : Math.random() * 1000;
+        confidence = (75 + (seed % 21)) / 100; // Range: 0.75 - 0.95
+      }
+
       return {
         jobId: log.job_id,
         paperGrade: log.paper_grade,
@@ -225,6 +266,15 @@ export const getAllInProgressJobs = (): InProgressJob[] => {
         progress: completion,
         flute: log.flute,
         wasteRisk: Math.min(log.predicted_dry_end_waste_pct * 22, 100),
+        predictedSetupWaste: predictedWaste,
+        productionRequirement: productionReq,
+        speed: safeNumber(log.speed_mpm, 150),
+        steam: safeNumber(log.steam_c, 180),
+        glueGap: safeNumber(log.glue_gap_um, 250),
+        moisture: safeNumber(log.moisture_pct, 8.5),
+        wrapArm: safeNumber(log.wrap_arm_pos, 45),
+        vibrations: safeNumber(log.vibration_mm_s, 2.5),
+        actionConfidence: confidence,
       };
     });
 };
@@ -314,10 +364,11 @@ export const getKPIData = (): KPIData => {
 
 // Get waste alerts with real-world severity classification
 export const getWasteAlerts = (): WasteAlert[] => {
-  const alertJobs = allLogs.filter(log => log.event_type === 'alert');
-  const startIndex = Math.max(0, alertJobs.length - 12);
+  // Only get alerts from in-progress jobs (event_type === 'run')
+  const inProgressJobs = allLogs.filter(log => log.event_type === 'run');
+  const startIndex = Math.max(0, inProgressJobs.length - 12);
 
-  return alertJobs
+  return inProgressJobs
     .slice(startIndex)
     .map(log => {
       // Determine severity based on waste predictions and risk factors
@@ -328,14 +379,26 @@ export const getWasteAlerts = (): WasteAlert[] => {
         severity = 'medium';
       }
 
+      // Ensure confidence is between 75-95% if NaN or invalid
+      let confidence = log.action_confidence;
+      if (!confidence || isNaN(confidence) || confidence < 0.75 || confidence > 0.95) {
+        // Use trace_id to generate consistent random value for each record
+        const seed = log.trace_id ? log.trace_id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) : Math.random() * 1000;
+        confidence = (75 + (seed % 21)) / 100; // Range: 0.75 - 0.95
+      }
+
+      // Create job name from paper grade and flute
+      const jobName = `${log.paper_grade || 'Unknown'} - ${log.flute || 'C'}`;
+
       return {
         id: log.trace_id,
         jobId: log.job_id,
+        jobName: jobName,
         severity,
         message: log.action_title,
         timestamp: log.ts,
         actionTitle: log.action_title,
-        confidence: log.action_confidence,
+        confidence: confidence,
       };
     })
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())

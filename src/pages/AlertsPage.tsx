@@ -157,10 +157,14 @@ export const AlertsPage: React.FC = () => {
                           <Text type="secondary" style={{ fontSize: 13 }}>
                             {alert.message}
                           </Text>
-                          <div style={{ display: 'flex', gap: 16, marginTop: 4 }}>
+                          <div style={{ display: 'flex', gap: 16, marginTop: 4, flexWrap: 'wrap' }}>
                             <Text style={{ fontSize: 12 }}>
                               <Text type="secondary">Job ID:</Text>{' '}
                               <Text strong code>{alert.jobId}</Text>
+                            </Text>
+                            <Text style={{ fontSize: 12 }}>
+                              <Text type="secondary">Job Name:</Text>{' '}
+                              <Text strong>{alert.jobName}</Text>
                             </Text>
                             <Text style={{ fontSize: 12 }}>
                               <Text type="secondary">Confidence:</Text>{' '}
