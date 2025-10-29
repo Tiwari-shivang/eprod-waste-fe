@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Layout, Row, Col, Typography, Space, Modal } from 'antd';
+import { useNavigate } from 'react-router-dom';
+import { AppHeader } from '../components/Header';
 import { CurrentJobCard, AISuggestionsCard } from '../components/CurrentJob';
 import { KPISection } from '../components/KPISummary';
 import { HistoricalJobsTable, InProgressJobsTable, UpcomingJobsTable } from '../components/JobTables';
@@ -11,6 +13,7 @@ const { Content } = Layout;
 const { Title } = Typography;
 
 export const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
   const [currentJob, setCurrentJob] = useState<CurrentJob | null>(null);
   const [historicalJobs, setHistoricalJobs] = useState<HistoricalJob[]>([]);
   const [inProgressJobs, setInProgressJobs] = useState<InProgressJob[]>([]);
@@ -20,22 +23,18 @@ export const Dashboard: React.FC = () => {
   const [_selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [currentJobIndex, setCurrentJobIndex] = useState(0);
   const [allRunningJobs, setAllRunningJobs] = useState<CurrentJob[]>([]);
-  const [historicalModalOpen, setHistoricalModalOpen] = useState(false);
   const [inProgressModalOpen, setInProgressModalOpen] = useState(false);
-  const [allHistoricalJobs, setAllHistoricalJobs] = useState<HistoricalJob[]>([]);
   const [allInProgressJobs, setAllInProgressJobs] = useState<InProgressJob[]>([]);
 
   useEffect(() => {
     // Fetch all running jobs once on mount
     const fetchJobs = async () => {
-      const [allJobs, allHistorical, allInProgress] = await Promise.all([
+      const [allJobs, allInProgress] = await Promise.all([
         dashboardAPI.getAllRunningJobs(),
-        dashboardAPI.getAllHistoricalJobs(),
         dashboardAPI.getAllInProgressJobs(),
       ]);
       setAllRunningJobs(allJobs);
       setCurrentJob(allJobs[0] || null);
-      setAllHistoricalJobs(allHistorical);
       setAllInProgressJobs(allInProgress);
     };
 
@@ -98,7 +97,8 @@ export const Dashboard: React.FC = () => {
   };
 
   return (
-    <Layout style={{ minHeight: '100vh', background: '#f8fafc' }}>
+    <Layout style={{ minHeight: '100vh', background: '#f0f2f5' }}>
+      <AppHeader />
       <Content style={{ padding: '32px' }}>
         <Space direction="vertical" size={24} style={{ width: '100%' }}>
           {/* Header */}
@@ -138,6 +138,7 @@ export const Dashboard: React.FC = () => {
                 inProgressJobs={inProgressJobs}
                 onJobClick={handleJobClick}
                 onViewAll={() => setInProgressModalOpen(true)}
+                onViewAnalytics={() => navigate('/analytics')}
               />
             </Col>
           </Row>
@@ -148,7 +149,7 @@ export const Dashboard: React.FC = () => {
               <HistoricalJobsTable
                 jobs={historicalJobs}
                 onJobClick={handleJobClick}
-                onViewAll={() => setHistoricalModalOpen(true)}
+                onViewAll={() => navigate('/historical-data')}
               />
             </Col>
             <Col xs={24} xl={12}>
@@ -164,25 +165,6 @@ export const Dashboard: React.FC = () => {
         onClose={() => setDrawerOpen(false)}
         job={currentJob}
       />
-
-      {/* Historical Jobs Modal */}
-      <Modal
-        title="All Historical Jobs"
-        open={historicalModalOpen}
-        onCancel={() => setHistoricalModalOpen(false)}
-        footer={null}
-        width={1200}
-        style={{ top: 20 }}
-      >
-        <div style={{ padding: '16px 0' }}>
-          <HistoricalJobsTable
-            jobs={allHistoricalJobs}
-            onJobClick={handleJobClick}
-            pageSize={10}
-            showCard={false}
-          />
-        </div>
-      </Modal>
 
       {/* In-Progress Jobs Modal */}
       <Modal

@@ -87,7 +87,7 @@ export const JobDetailsDrawer: React.FC<JobDetailsDrawerProps> = ({ open, onClos
         {/* Process Parameters */}
         <div>
           <Title level={5}>
-            <ThunderboltOutlined /> Process Parameters
+            <ThunderboltOutlined /> AI recommended corrugator Parameters
           </Title>
           <Descriptions column={1} size="small" bordered>
             <Descriptions.Item label="Speed">
@@ -120,13 +120,26 @@ export const JobDetailsDrawer: React.FC<JobDetailsDrawerProps> = ({ open, onClos
                   Recommended Actions:
                 </Text>
                 <Space direction="vertical" size={6} style={{ width: '100%' }}>
-                  {job.actionSteps.slice(0, 4).map((step, idx) => (
-                    <div key={idx} style={{ padding: '6px 10px', background: '#fff', borderRadius: 4, border: '1px solid #d6e4ff' }}>
-                      <Text style={{ fontSize: 13 }}>
-                        {idx + 1}. {typeof step === 'string' ? step : step.step}
-                      </Text>
-                    </div>
-                  ))}
+                  <div style={{ padding: '6px 10px', background: '#fff', borderRadius: 4, border: '1px solid #d6e4ff' }}>
+                    <Text style={{ fontSize: 13 }}>
+                      1. Adjust steam temperature to optimal range ({job.steam.toFixed(1)}°C)
+                    </Text>
+                  </div>
+                  <div style={{ padding: '6px 10px', background: '#fff', borderRadius: 4, border: '1px solid #d6e4ff' }}>
+                    <Text style={{ fontSize: 13 }}>
+                      2. Optimize machine speed for current material ({job.speed.toFixed(1)} m/min)
+                    </Text>
+                  </div>
+                  <div style={{ padding: '6px 10px', background: '#fff', borderRadius: 4, border: '1px solid #d6e4ff' }}>
+                    <Text style={{ fontSize: 13 }}>
+                      3. Monitor {job.paperGrade} grade paper handling for optimal results
+                    </Text>
+                  </div>
+                  <div style={{ padding: '6px 10px', background: '#fff', borderRadius: 4, border: '1px solid #d6e4ff' }}>
+                    <Text style={{ fontSize: 13 }}>
+                      4. Adjust tension settings for {job.flute} flute type configuration
+                    </Text>
+                  </div>
                 </Space>
               </div>
             </Space>

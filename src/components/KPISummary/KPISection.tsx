@@ -1,6 +1,7 @@
 import React from 'react';
-import { Row, Col, Card } from 'antd';
+import { Row, Col, Card, Button } from 'antd';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { BarChartOutlined } from '@ant-design/icons';
 import { InProgressJobsTable } from '../JobTables';
 import type { KPIChartData, InProgressJob } from '../../types';
 
@@ -9,9 +10,10 @@ interface KPISectionProps {
   inProgressJobs: InProgressJob[];
   onJobClick?: (jobId: string) => void;
   onViewAll?: () => void;
+  onViewAnalytics?: () => void;
 }
 
-export const KPISection: React.FC<KPISectionProps> = ({ chartData, inProgressJobs, onJobClick, onViewAll }) => {
+export const KPISection: React.FC<KPISectionProps> = ({ chartData, inProgressJobs, onJobClick, onViewAll, onViewAnalytics }) => {
   const cardHeight = 480; // Fixed height for both sides
 
   return (
@@ -22,7 +24,20 @@ export const KPISection: React.FC<KPISectionProps> = ({ chartData, inProgressJob
           <Card
             title="KPI Summary - Waste Trend"
             bordered={false}
-            style={{ boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)', height: cardHeight }}
+            style={{ boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)', height: cardHeight, cursor: 'pointer' }}
+            extra={
+              onViewAnalytics && (
+                <Button
+                  type="primary"
+                  icon={<BarChartOutlined />}
+                  onClick={onViewAnalytics}
+                  size="small"
+                >
+                  View Analytics
+                </Button>
+              )
+            }
+            onClick={onViewAnalytics}
           >
             <ResponsiveContainer width="100%" height={cardHeight - 90}>
               <LineChart data={chartData}>

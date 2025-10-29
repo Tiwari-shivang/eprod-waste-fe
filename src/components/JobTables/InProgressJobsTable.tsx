@@ -33,6 +33,7 @@ export const InProgressJobsTable: React.FC<InProgressJobsTableProps> = ({
       dataIndex: 'jobId',
       key: 'jobId',
       width: 200,
+      fixed: 'left',
       ellipsis: true,
       render: (text: string) => (
         <Text
@@ -47,6 +48,7 @@ export const InProgressJobsTable: React.FC<InProgressJobsTableProps> = ({
       title: 'Paper Grade',
       dataIndex: 'paperGrade',
       key: 'paperGrade',
+      width: 130,
       ellipsis: true,
     },
     {
@@ -73,6 +75,111 @@ export const InProgressJobsTable: React.FC<InProgressJobsTableProps> = ({
         </Space>
       ),
       sorter: (a, b) => a.completion - b.completion,
+    },
+    {
+      title: 'Predicted Waste (kg)',
+      dataIndex: 'predictedSetupWaste',
+      key: 'predictedSetupWaste',
+      width: 150,
+      align: 'right',
+      render: (value: number) => (
+        <Text strong style={{ color: '#faad14' }}>
+          {value?.toFixed(1) || '-'}
+        </Text>
+      ),
+      sorter: (a, b) => (a.predictedSetupWaste || 0) - (b.predictedSetupWaste || 0),
+    },
+    {
+      title: 'Production Req (kg)',
+      dataIndex: 'productionRequirement',
+      key: 'productionRequirement',
+      width: 150,
+      align: 'right',
+      render: (value: number) => (
+        <Text strong style={{ color: '#1677ff' }}>
+          {value?.toFixed(1) || '-'}
+        </Text>
+      ),
+      sorter: (a, b) => (a.productionRequirement || 0) - (b.productionRequirement || 0),
+    },
+    {
+      title: 'Suggested Speed (m/min)',
+      dataIndex: 'speed',
+      key: 'speed',
+      width: 160,
+      align: 'right',
+      render: (value: number) => (
+        <Text>{value?.toFixed(1) || '-'}</Text>
+      ),
+      sorter: (a, b) => (a.speed || 0) - (b.speed || 0),
+    },
+    {
+      title: 'Suggested Temp (°C)',
+      dataIndex: 'steam',
+      key: 'steam',
+      width: 150,
+      align: 'right',
+      render: (value: number) => (
+        <Text>{value?.toFixed(1) || '-'}</Text>
+      ),
+      sorter: (a, b) => (a.steam || 0) - (b.steam || 0),
+    },
+    {
+      title: 'Glue Gap (μm)',
+      dataIndex: 'glueGap',
+      key: 'glueGap',
+      width: 120,
+      align: 'right',
+      render: (value: number) => (
+        <Text>{value?.toFixed(0) || '-'}</Text>
+      ),
+      sorter: (a, b) => (a.glueGap || 0) - (b.glueGap || 0),
+    },
+    {
+      title: 'Moisture (%)',
+      dataIndex: 'moisture',
+      key: 'moisture',
+      width: 120,
+      align: 'right',
+      render: (value: number) => (
+        <Text>{value?.toFixed(2) || '-'}</Text>
+      ),
+      sorter: (a, b) => (a.moisture || 0) - (b.moisture || 0),
+    },
+    {
+      title: 'Wrap Arm (°)',
+      dataIndex: 'wrapArm',
+      key: 'wrapArm',
+      width: 120,
+      align: 'right',
+      render: (value: number) => (
+        <Text>{value?.toFixed(0) || '-'}</Text>
+      ),
+      sorter: (a, b) => (a.wrapArm || 0) - (b.wrapArm || 0),
+    },
+    {
+      title: 'Vibrations (mm/s)',
+      dataIndex: 'vibrations',
+      key: 'vibrations',
+      width: 140,
+      align: 'right',
+      render: (value: number) => (
+        <Text>{value?.toFixed(2) || '-'}</Text>
+      ),
+      sorter: (a, b) => (a.vibrations || 0) - (b.vibrations || 0),
+    },
+    {
+      title: 'AI Confidence',
+      dataIndex: 'actionConfidence',
+      key: 'actionConfidence',
+      width: 130,
+      align: 'center',
+      render: (value: number) => (
+        <Text style={{ color: value > 0.8 ? '#52c41a' : value > 0.6 ? '#faad14' : '#ff4d4f' }}>
+          {value ? `${(value * 100).toFixed(0)}%` : '-'}
+        </Text>
+      ),
+      sorter: (a, b) => (a.actionConfidence || 0) - (b.actionConfidence || 0),
     },
     {
       title: 'Waste Risk',
@@ -102,7 +209,7 @@ export const InProgressJobsTable: React.FC<InProgressJobsTableProps> = ({
         pageSizeOptions: ['10', '20', '50', '100'],
       }}
       size="small"
-      scroll={{ x: 600, y: showCard ? 300 : undefined }}
+      scroll={{ x: 2000, y: showCard ? 300 : undefined }}
     />
   );
 

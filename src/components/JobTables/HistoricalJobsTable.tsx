@@ -127,7 +127,7 @@ export const HistoricalJobsTable: React.FC<HistoricalJobsTableProps> = ({
 
   return (
     <Card
-      title="Historical Jobs"
+      title="Historical Job Logs"
       bordered={false}
       style={{ boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)', height: '100%' }}
       extra={

@@ -52,22 +52,39 @@ const convertToCurrentJob = (log: CorrugatorLog, index: number): CurrentJob => {
     actionSteps = [];
   }
 
-  // Add more detailed action steps if the original list is empty or has few items
-  if (actionSteps.length < 3) {
-    actionSteps = [
-      { step: 'Adjust steam temperature to optimal range', delta_c: log.candidate_steam_c - log.steam_c },
-      { step: 'Optimize machine speed for current material', delta_mpm: log.candidate_speed_mpm - log.speed_mpm },
-      { step: 'Fine-tune glue gap for better adhesion', delta_c: 0 },
-      { step: 'Monitor edge alignment sensors continuously' },
-      { step: 'Verify moisture content is within spec range' },
-      { step: 'Check wrap arm positioning for consistency' },
-    ];
-  }
-
   // Filter out NaN values and ensure valid numbers
   const safeNumber = (value: any, fallback: number = 0): number => {
     return (typeof value === 'number' && !isNaN(value)) ? value : fallback;
   };
+
+  // Add more detailed action steps if the original list is empty or has few items
+  if (actionSteps.length < 3) {
+    // Calculate specific values for recommendations
+    const currentGlueGap = safeNumber(log.glue_gap_um, 250);
+    const targetGlueGap = safeNumber(log.candidate_glue_gap_um, 280);
+    const glueGapDelta = targetGlueGap - currentGlueGap;
+    const glueGapDirection = glueGapDelta > 0 ? 'increase' : 'decrease';
+
+    const currentMoisture = safeNumber(log.moisture_pct, 8.5);
+    const targetMoistureMin = 7.0;
+    const targetMoistureMax = 9.0;
+
+    const currentWrapArm = safeNumber(log.wrap_arm_pos, 45);
+    const targetWrapArm = Math.round(currentWrapArm + (Math.random() > 0.5 ? 5 : -5));
+
+    const currentVibration = safeNumber(log.vibration_mm_s, 2.5);
+    const maxVibration = 3.0;
+
+    actionSteps = [
+      { step: 'Adjust steam temperature to optimal range', delta_c: log.candidate_steam_c - log.steam_c },
+      { step: 'Optimize machine speed for current material', delta_mpm: log.candidate_speed_mpm - log.speed_mpm },
+      { step: `${glueGapDirection === 'increase' ? 'Increase' : 'Reduce'} glue gap from ${Math.abs(currentGlueGap).toFixed(0)}μm to ${Math.abs(targetGlueGap).toFixed(0)}μm for optimal adhesion (${glueGapDirection} by ${Math.abs(glueGapDelta).toFixed(0)}μm)` },
+      { step: `Monitor edge alignment sensors - maintain deviation below 2mm for consistent quality` },
+      { step: `Verify moisture content is between ${targetMoistureMin.toFixed(1)}% and ${targetMoistureMax.toFixed(1)}% (current: ${currentMoisture.toFixed(1)}%)` },
+      { step: `Adjust wrap arm position to ${targetWrapArm}° (current: ${currentWrapArm}°) for better board formation` },
+      { step: `Monitor vibration levels - keep below ${maxVibration.toFixed(1)}mm/s (current: ${currentVibration.toFixed(1)}mm/s)` },
+    ];
+  }
 
   // Realistic completion percentage that increases over time
   const baseCompletion = 65 + (index % 30);
@@ -352,6 +369,140 @@ export const getKPIChartData = (): KPIChartData[] => {
   });
 };
 
+// Analytics page data
+
+// Waste by Event Type
+export const getWasteByEventType = () => {
+  const eventTypeData: Record<string, { count: number; totalWaste: number }> = {
+    setup: { count: 0, totalWaste: 0 },
+    run: { count: 0, totalWaste: 0 },
+    adjust: { count: 0, totalWaste: 0 },
+    alert: { count: 0, totalWaste: 0 },
+  };
+
+  allLogs.forEach(log => {
+    const eventType = log.event_type;
+    if (eventTypeData[eventType]) {
+      eventTypeData[eventType].count++;
+      eventTypeData[eventType].totalWaste += log.predicted_setup_waste_kg || 0;
+    }
+  });
+
+  return Object.entries(eventTypeData).map(([name, data]) => ({
+    name: name.charAt(0).toUpperCase() + name.slice(1),
+    value: Math.round(data.totalWaste * 10) / 10,
+    count: data.count,
+    avgWaste: data.count > 0 ? Math.round((data.totalWaste / data.count) * 10) / 10 : 0,
+  }));
+};
+
+// AI Confidence Trend over Time
+export const getAIConfidenceTrend = () => {
+  const recentLogs = allLogs.slice(-30);
+
+  return recentLogs.map(log => ({
+    time: new Date(log.ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+    date: new Date(log.ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    confidence: Math.round((log.action_confidence || 0) * 100 * 10) / 10,
+    effectConfidence: Math.round((log.effect_confidence || 0) * 100 * 10) / 10,
+  }));
+};
+
+// Speed vs Waste Analysis
+export const getSpeedVsWasteAnalysis = () => {
+  // Group data by speed ranges and calculate average waste
+  const speedRanges = [
+    { min: 0, max: 150, label: '0-150' },
+    { min: 150, max: 180, label: '150-180' },
+    { min: 180, max: 200, label: '180-200' },
+    { min: 200, max: 220, label: '200-220' },
+    { min: 220, max: 250, label: '220-250' },
+    { min: 250, max: 300, label: '250+' },
+  ];
+
+  return speedRanges.map(range => {
+    const logsInRange = allLogs.filter(
+      log => log.speed_mpm >= range.min && log.speed_mpm < range.max
+    );
+
+    const avgWaste = logsInRange.length > 0
+      ? logsInRange.reduce((sum, log) => sum + (log.predicted_setup_waste_kg || 0), 0) / logsInRange.length
+      : 0;
+
+    const avgSpeed = logsInRange.length > 0
+      ? logsInRange.reduce((sum, log) => sum + (log.speed_mpm || 0), 0) / logsInRange.length
+      : (range.min + range.max) / 2;
+
+    const wasteSaved = logsInRange.length > 0
+      ? logsInRange.reduce((sum, log) => sum + (log.action_effect_waste_saved_kg || 0), 0)
+      : 0;
+
+    return {
+      speedRange: range.label,
+      avgWaste: Math.round(avgWaste * 10) / 10,
+      avgSpeed: Math.round(avgSpeed * 10) / 10,
+      count: logsInRange.length,
+      wasteSaved: Math.round(wasteSaved * 10) / 10,
+    };
+  }).filter(item => item.count > 0); // Only include ranges with data
+};
+
+// Paper Grade Performance
+export const getPaperGradePerformance = () => {
+  const gradeData: Record<string, { count: number; totalWaste: number; wasteSaved: number }> = {};
+
+  allLogs.forEach(log => {
+    const grade = log.paper_grade || 'Unknown';
+    if (!gradeData[grade]) {
+      gradeData[grade] = { count: 0, totalWaste: 0, wasteSaved: 0 };
+    }
+    gradeData[grade].count++;
+    gradeData[grade].totalWaste += log.predicted_setup_waste_kg || 0;
+    gradeData[grade].wasteSaved += log.action_effect_waste_saved_kg || 0;
+  });
+
+  return Object.entries(gradeData)
+    .map(([grade, data]) => ({
+      grade,
+      avgWaste: Math.round((data.totalWaste / data.count) * 10) / 10,
+      totalWasteSaved: Math.round(data.wasteSaved * 10) / 10,
+      count: data.count,
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 8); // Top 8 grades
+};
+
+// Get all logs for historical data page
+export const getAllLogs = (): CorrugatorLog[] => {
+  return allLogs;
+};
+
+// Get historical data KPIs
+export const getHistoricalDataKPIs = () => {
+  // Calculate total AI waste saved (sum of all action_effect_waste_saved_kg)
+  const totalWasteSaved = allLogs.reduce((sum, log) => {
+    const saved = log.action_effect_waste_saved_kg || 0;
+    return sum + saved;
+  }, 0);
+
+  // Total number of jobs (unique job_ids)
+  const uniqueJobs = new Set(allLogs.map(log => log.job_id));
+  const totalJobs = uniqueJobs.size;
+
+  // AI Estimate Correctness
+  // Calculate based on effect_confidence (average confidence across all logs with action effects)
+  const logsWithEffects = allLogs.filter(log => log.effect_confidence && log.effect_confidence > 0);
+  const avgCorrectness = logsWithEffects.length > 0
+    ? (logsWithEffects.reduce((sum, log) => sum + (log.effect_confidence || 0), 0) / logsWithEffects.length) * 100
+    : 85; // Default to 85% if no data
+
+  return {
+    totalWasteSaved, // in kg
+    totalJobs,
+    aiCorrectness: avgCorrectness, // in percentage
+  };
+};
+
 // Simulated API calls
 export const dashboardAPI = {
   getCurrentJob: () => Promise.resolve(getCurrentJob()),
@@ -364,4 +515,11 @@ export const dashboardAPI = {
   getKPIData: () => Promise.resolve(getKPIData()),
   getWasteAlerts: () => Promise.resolve(getWasteAlerts()),
   getKPIChartData: () => Promise.resolve(getKPIChartData()),
+  getAllLogs: () => Promise.resolve(getAllLogs()),
+  getHistoricalDataKPIs: () => Promise.resolve(getHistoricalDataKPIs()),
+  // Analytics
+  getWasteByEventType: () => Promise.resolve(getWasteByEventType()),
+  getAIConfidenceTrend: () => Promise.resolve(getAIConfidenceTrend()),
+  getSpeedVsWasteAnalysis: () => Promise.resolve(getSpeedVsWasteAnalysis()),
+  getPaperGradePerformance: () => Promise.resolve(getPaperGradePerformance()),
 };

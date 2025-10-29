@@ -184,22 +184,31 @@ export const CurrentJobCard: React.FC<CurrentJobCardProps> = ({
                 <WasteRiskMeter risk={Math.round(job.wasteRisk)} size={200} />
               </div>
 
-              {/* Waste Risk Reason */}
+              {/* Waste Risk Reason - AI Action Steps Summary */}
               <div style={{
                 marginTop: 16,
                 padding: '12px 16px',
                 background: job.wasteRisk > 60 ? '#fff1f0' : job.wasteRisk > 30 ? '#fffbe6' : '#f6ffed',
                 borderRadius: 8,
                 border: `1px solid ${job.wasteRisk > 60 ? '#ffccc7' : job.wasteRisk > 30 ? '#ffe58f' : '#b7eb8f'}`,
-                textAlign: 'center'
               }}>
-                <Text style={{ fontSize: 13, color: '#595959', fontStyle: 'italic' }}>
-                  {job.wasteRisk > 60
-                    ? `High risk due to ${job.speed > 180 ? 'excessive speed' : 'suboptimal steam temperature'} and material grade complexity`
-                    : job.wasteRisk > 30
-                    ? `Moderate risk from ${job.flute === 'E' ? 'fine flute type' : 'current machine settings'} requiring careful monitoring`
-                    : 'Low risk - optimal conditions maintained with recommended parameters'}
+                <Text strong style={{ fontSize: 13, color: '#1f1f1f', display: 'block', marginBottom: 6 }}>
+                  AI Suggestions:
                 </Text>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <Text style={{ fontSize: 12, color: '#595959' }}>
+                    • Adjust steam temperature to {job.steam.toFixed(1)}°C
+                  </Text>
+                  <Text style={{ fontSize: 12, color: '#595959' }}>
+                    • Optimize speed to {job.speed.toFixed(1)} m/min
+                  </Text>
+                  <Text style={{ fontSize: 12, color: '#595959' }}>
+                    • Monitor {job.paperGrade} grade paper handling
+                  </Text>
+                  <Text style={{ fontSize: 12, color: '#595959' }}>
+                    • Adjust tension for {job.flute} flute type
+                  </Text>
+                </div>
               </div>
             </div>
 

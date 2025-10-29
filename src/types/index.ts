@@ -115,6 +115,15 @@ export interface InProgressJob {
   progress: number;
   flute: string;
   wasteRisk: number;
+  predictedSetupWaste?: number;
+  productionRequirement?: number;
+  speed?: number;
+  steam?: number;
+  glueGap?: number;
+  moisture?: number;
+  wrapArm?: number;
+  vibrations?: number;
+  actionConfidence?: number;
 }
 
 export interface UpcomingJob {
