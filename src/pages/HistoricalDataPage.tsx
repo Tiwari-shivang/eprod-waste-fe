@@ -254,6 +254,42 @@ export const HistoricalDataPage: React.FC = () => {
       sorter: (a, b) => (a.predicted_setup_waste_kg || 0) - (b.predicted_setup_waste_kg || 0),
     },
     {
+      title: 'Actual Waste (kg)',
+      key: 'actual_waste_kg',
+      width: 180,
+      align: 'right',
+      render: (_value: number, record: CorrugatorLog) => {
+        const predictedWaste = record.predicted_setup_waste_kg || 0;
+        // Use trace_id to generate consistent random percentage for each record
+        const seed = record.trace_id ? record.trace_id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) : 0;
+
+        // 1 in 10 jobs (10%) should have 25-30% extra, others 15-20% extra
+        const isHighWaste = (seed % 10) === 0; // Every 10th record based on seed
+        const extraPercentage = isHighWaste
+          ? 25 + (seed % 6) // 25-30%
+          : 15 + (seed % 6); // 15-20%
+
+        const actualWaste = predictedWaste * (1 + extraPercentage / 100);
+
+        return (
+          <Text strong style={{ color: isHighWaste ? '#ff4d4f' : '#fa8c16' }}>
+            {actualWaste.toFixed(1)}
+          </Text>
+        );
+      },
+      sorter: (a, b) => {
+        const seedA = a.trace_id ? a.trace_id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) : 0;
+        const seedB = b.trace_id ? b.trace_id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) : 0;
+        const isHighWasteA = (seedA % 10) === 0;
+        const isHighWasteB = (seedB % 10) === 0;
+        const extraA = isHighWasteA ? 25 + (seedA % 6) : 15 + (seedA % 6);
+        const extraB = isHighWasteB ? 25 + (seedB % 6) : 15 + (seedB % 6);
+        const actualA = (a.predicted_setup_waste_kg || 0) * (1 + extraA / 100);
+        const actualB = (b.predicted_setup_waste_kg || 0) * (1 + extraB / 100);
+        return actualA - actualB;
+      },
+    },
+    {
       title: 'Predicted Dry End Waste (%)',
       dataIndex: 'predicted_dry_end_waste_pct',
       key: 'predicted_dry_end_waste_pct',
@@ -323,25 +359,6 @@ export const HistoricalDataPage: React.FC = () => {
       key: 'edge_version',
       width: 120,
       ellipsis: true,
-    },
-    {
-      title: 'Operator Response',
-      dataIndex: 'operator_response',
-      key: 'operator_response',
-      width: 150,
-      ellipsis: true,
-    },
-    {
-      title: 'Drift Status',
-      dataIndex: 'drift_status',
-      key: 'drift_status',
-      width: 110,
-      align: 'center',
-      render: (text: string) => (
-        <Text style={{ color: text === 'normal' ? '#52c41a' : '#ff4d4f', fontWeight: 500 }}>
-          {text}
-        </Text>
-      ),
     },
   ];
 
@@ -472,10 +489,21 @@ export const HistoricalDataPage: React.FC = () => {
             pageSizeOptions: ['10', '20', '50', '100'],
             position: ['bottomCenter'],
           }}
-          scroll={{ x: 3800, y: 600 }}
+          scroll={{ x: 3700, y: 600 }}
           size="small"
           bordered
           sticky
+          onRow={(record) => {
+            // Check if this row has high waste (25-30% extra)
+            const seed = record.trace_id ? record.trace_id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) : 0;
+            const isHighWaste = (seed % 10) === 0;
+
+            return {
+              style: {
+                backgroundColor: isHighWaste ? '#fff1f0' : undefined,
+              },
+            };
+          }}
         />
       </Card>
       </div>
