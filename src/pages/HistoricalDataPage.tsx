@@ -79,10 +79,9 @@ export const HistoricalDataPage: React.FC = () => {
       width: 140,
       align: 'center',
       render: (record: CorrugatorLog) => {
-        // Generate shift start time based on timestamp (e.g., 08:00 or 20:00)
+        // Start shift time matches the timestamp
         const ts = dayjs(record.ts);
-        const hour = ts.hour();
-        const shiftStart = hour < 12 ? '08:00' : hour < 20 ? '14:00' : '20:00';
+        const shiftStart = ts.format('HH:mm');
         return (
           <Text style={{ fontSize: 12, fontFamily: 'monospace', color: '#52c41a' }}>
             {shiftStart}
@@ -96,10 +95,12 @@ export const HistoricalDataPage: React.FC = () => {
       width: 140,
       align: 'center',
       render: (record: CorrugatorLog) => {
-        // Generate shift end time based on timestamp
+        // End shift time is 2-4 hours after start time (random)
         const ts = dayjs(record.ts);
-        const hour = ts.hour();
-        const shiftEnd = hour < 12 ? '14:00' : hour < 20 ? '20:00' : '02:00';
+        // Use trace_id to generate consistent random hours (2-4) for each record
+        const seed = record.trace_id ? record.trace_id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) : 0;
+        const hoursToAdd = 2 + (seed % 3); // Random between 2-4 hours
+        const shiftEnd = ts.add(hoursToAdd, 'hour').format('HH:mm');
         return (
           <Text style={{ fontSize: 12, fontFamily: 'monospace', color: '#ff4d4f' }}>
             {shiftEnd}

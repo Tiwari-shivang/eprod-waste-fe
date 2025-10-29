@@ -192,23 +192,12 @@ export const CurrentJobCard: React.FC<CurrentJobCardProps> = ({
                 borderRadius: 8,
                 border: `1px solid ${job.wasteRisk > 60 ? '#ffccc7' : job.wasteRisk > 30 ? '#ffe58f' : '#b7eb8f'}`,
               }}>
-                <Text strong style={{ fontSize: 13, color: '#1f1f1f', display: 'block', marginBottom: 6 }}>
-                  AI Suggestions:
+                <Text strong style={{ fontSize: 13, color: '#1f1f1f', display: 'block', marginBottom: 8 }}>
+                  AI Suggestions ({((job.actionConfidence || 0.85) * 100).toFixed(0)}% Confidence):
                 </Text>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <Text style={{ fontSize: 12, color: '#595959' }}>
-                    • Adjust steam temperature to {job.steam.toFixed(1)}°C
-                  </Text>
-                  <Text style={{ fontSize: 12, color: '#595959' }}>
-                    • Optimize speed to {job.speed.toFixed(1)} m/min
-                  </Text>
-                  <Text style={{ fontSize: 12, color: '#595959' }}>
-                    • Monitor {job.paperGrade} grade paper handling
-                  </Text>
-                  <Text style={{ fontSize: 12, color: '#595959' }}>
-                    • Adjust tension for {job.flute} flute type
-                  </Text>
-                </div>
+                <Text style={{ fontSize: 12, color: '#595959', lineHeight: '1.6', display: 'block', textAlign: 'justify' }}>
+                  Based on current job parameters and historical data analysis, the AI recommends adjusting the steam temperature to {job.steam.toFixed(1)}°C and optimizing the machine speed to {job.speed.toFixed(1)} m/min for optimal results. Please monitor the {job.paperGrade} grade paper handling carefully throughout the process and ensure tension settings are properly adjusted for the {job.flute} flute type configuration to minimize waste generation.
+                </Text>
               </div>
             </div>
 

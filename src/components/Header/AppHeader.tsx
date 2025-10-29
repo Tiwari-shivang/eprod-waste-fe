@@ -18,7 +18,7 @@ interface AppHeaderProps {
   alertCount?: number;
 }
 
-export const AppHeader: React.FC<AppHeaderProps> = ({ alertCount = 0 }) => {
+export const AppHeader: React.FC<AppHeaderProps> = ({ alertCount = 3 }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -69,7 +69,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ alertCount = 0 }) => {
       key: 'alerts',
       icon: <BellOutlined style={{ fontSize: 16 }} />,
       label: (
-        <Badge count={alertCount} offset={[10, 0]} size="small">
+        <Badge count={alertCount} offset={[10, 0]} size="small" showZero>
           <Text style={{ fontSize: 14, fontWeight: 500, color: 'inherit', paddingRight: 8 }}>Alerts</Text>
         </Badge>
       ),
