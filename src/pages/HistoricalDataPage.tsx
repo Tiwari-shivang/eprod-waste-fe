@@ -343,8 +343,68 @@ export const HistoricalDataPage: React.FC = () => {
       title: 'Action Title',
       dataIndex: 'action_title',
       key: 'action_title',
-      width: 250,
+      width: 350,
       ellipsis: true,
+      render: (_text: string, record: CorrugatorLog) => {
+        // Generate random but consistent action title based on trace_id
+        const allAlerts = [
+          'Reduce steam temperature by 3°C (current 46°C → 43°C) to control warp',
+          'Optimize machine speed for current material: increase +16.2 m/min (current 152 → 168.2 m/min)',
+          'Increase glue gap 1018µm → 1023µm (+5µm) for better adhesion',
+          'Edge alignment deviation high — keep <2mm (current 2.7mm)',
+          'Moisture out of band — target 7.0–9.0% (current 6.7%); add preheater wrap +6%',
+          'Adjust wrap arm to 46° (current 51°) for cleaner board formation',
+          'Monitor vibration — keep <3.0 mm/s (current 1.8 mm/s, OK)',
+          'Lower double-backer zone-2 temperature −5°C (current 165°C → 160°C)',
+          'Raise liner preheater wrap +8% (current 42% → 50%) to lift moisture',
+          'Reduce machine speed −6 m/min (current 175 → 169 m/min) to stop flute crush',
+          'Increase glue solids +1.5% (current 23.0% → 24.5%) for bond strength',
+          'Doctor roll speed ratio too low — set 0.92 (current 0.88)',
+          'Raise nip pressure +0.3 kN/m (current 2.4 → 2.7 kN/m) at single facer',
+          'Lower bridge brake tension −20 N (current 180 → 160 N) to reduce washboarding',
+          'Correct web skew — offset idler −3mm to center (current +3mm)',
+          'Preheater condensate lag — open trap +10% (from 60% → 70%)',
+          'Glue application weight low — set 6.5 g/m² (current 5.8 g/m²)',
+          'Tighten edge guide PID — gain +0.2, integral −10% to stop hunting',
+          'Reduce flute tip pressure −15 kPa (current 120 → 105 kPa)',
+          'Liner moisture high — target ≤9.0% (current 9.8%); reduce preheater wrap −5%',
+          'Increase pull-roll differential +0.4% to clear micro-buckle (current 1.1% → 1.5%)',
+          'Raise hotplate pressure +0.1 bar (current 0.6 → 0.7 bar) for bond',
+          'Reduce glue pan temperature −2°C (current 44°C → 42°C) to slow pickup',
+          'Activate "Safe Recipe A" for K/K 140G (expected startup waste −28 kg)',
+          'Changeover prep — preheat steam to 43°C in 3 min; confirm roll swap',
+          'Edge curl detected — increase outer liner wrap +4% (current 36% → 40%)',
+          'Double-backer speed mismatch — set sync = single facer +0.2 m/min (current −0.4 m/min)',
+          'Raise glue gap on drive side +3µm (current 1020 → 1023µm) to fix edge open',
+          'Reduce glue gap on operator side −4µm (current 1030 → 1026µm) to stop squeeze-out',
+          'Bridge dancer unstable — increase damping +5 units; target ±10mm travel',
+          'Preheater surface dirty — schedule felt clean at next 10-min window',
+          'Splice approaching — reduce speed −10 m/min 15 s before splice',
+          'Raise core temp alarm threshold to 50°C (current 48°C) to avoid nuisance trips',
+          'Verify flute profile — tip wear suspected; inspect in next downtime',
+          'Lower wrap arm ramp rate −10% to prevent overshoot on grade change',
+          'Moisture split left/right — add left preheater +3% wrap',
+          'Deckle change queued — confirm new width 1600mm; auto-center guides',
+          'Liner tension drift — increase +15 N (current 140 → 155 N)',
+          'Reduce cross-machine temperature delta — zone-3 −4°C, zone-5 +2°C',
+          'Glue foaming detected — reduce agitator RPM −60 (current 420 → 360 RPM)',
+          'Raise wrap arm to 52° for wet-end stability (current 49°)',
+          'Vacuum box high — lower −5 kPa (current 32 → 27 kPa) to avoid flute collapse',
+          'Hotplate stick-slip — increase slip film spray +5% for 2 min',
+          'Shear knife due — calibrate in 15 min (cuts drifting +1.6mm)',
+          'Temperature sensor drift — switch to redundant probe B; schedule recalibration',
+          'Glue line offset +2mm from center — re-zero encoder and nudge −2mm',
+          'Raise preheater pressure +0.2 bar to reach target temp in time',
+          'Speed can return to nominal — increase +8 m/min (trend stable 2 min)',
+          'Maintain deviation below 2mm at edges (current 1.6mm, keep monitoring)',
+          'Verify moisture within 7.0–9.0% after adjustments (current 8.2%, good)',
+        ];
+
+        const seed = record.trace_id ? record.trace_id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) : 0;
+        const selectedAlert = allAlerts[seed % allAlerts.length];
+
+        return <Text ellipsis={{ tooltip: selectedAlert }}>{selectedAlert}</Text>;
+      },
     },
     {
       title: 'Optimizer',
@@ -489,7 +549,7 @@ export const HistoricalDataPage: React.FC = () => {
             pageSizeOptions: ['10', '20', '50', '100'],
             position: ['bottomCenter'],
           }}
-          scroll={{ x: 3700, y: 600 }}
+          scroll={{ x: 3800, y: 600 }}
           size="small"
           bordered
           sticky

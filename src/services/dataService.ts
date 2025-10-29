@@ -362,21 +362,74 @@ export const getKPIData = (): KPIData => {
   };
 };
 
+// Alert messages for different severity levels
+const HIGH_PRIORITY_ALERTS = [
+  'Reduce steam temperature by 3°C (current 46°C → 43°C) to control warp',
+  'Edge alignment deviation high — keep <2mm (current 2.7mm)',
+  'Moisture out of band — target 7.0–9.0% (current 6.7%); add preheater wrap +6%',
+  'Reduce machine speed −6 m/min (current 175 → 169 m/min) to stop flute crush',
+  'Liner moisture high — target ≤9.0% (current 9.8%); reduce preheater wrap −5%',
+  'Raise nip pressure +0.3 kN/m (current 2.4 → 2.7 kN/m) at single facer',
+  'Edge curl detected — increase outer liner wrap +4% (current 36% → 40%)',
+  'Glue application weight low — set 6.5 g/m² (current 5.8 g/m²)',
+  'Lower bridge brake tension −20 N (current 180 → 160 N) to reduce washboarding',
+  'Reduce flute tip pressure −15 kPa (current 120 → 105 kPa)',
+];
+
+const MEDIUM_PRIORITY_ALERTS = [
+  'Optimize machine speed for current material: increase +16.2 m/min (current 152 → 168.2 m/min)',
+  'Increase glue gap 1018µm → 1023µm (+5µm) for better adhesion',
+  'Adjust wrap arm to 46° (current 51°) for cleaner board formation',
+  'Lower double-backer zone-2 temperature −5°C (current 165°C → 160°C)',
+  'Raise liner preheater wrap +8% (current 42% → 50%) to lift moisture',
+  'Increase glue solids +1.5% (current 23.0% → 24.5%) for bond strength',
+  'Doctor roll speed ratio too low — set 0.92 (current 0.88)',
+  'Correct web skew — offset idler −3mm to center (current +3mm)',
+  'Raise hotplate pressure +0.1 bar (current 0.6 → 0.7 bar) for bond',
+  'Increase pull-roll differential +0.4% to clear micro-buckle (current 1.1% → 1.5%)',
+  'Reduce glue pan temperature −2°C (current 44°C → 42°C) to slow pickup',
+  'Raise glue gap on drive side +3µm (current 1020 → 1023µm) to fix edge open',
+  'Bridge dancer unstable — increase damping +5 units; target ±10mm travel',
+  'Liner tension drift — increase +15 N (current 140 → 155 N)',
+];
+
+const LOW_PRIORITY_ALERTS = [
+  'All parameters within optimal range. Continue monitoring current settings',
+  'System performance stable. Maintain current operational parameters',
+  'Production quality excellent. No adjustments needed at this time',
+];
+
 // Get waste alerts with real-world severity classification
 export const getWasteAlerts = (): WasteAlert[] => {
   // Only get alerts from in-progress jobs (event_type === 'run')
   const inProgressJobs = allLogs.filter(log => log.event_type === 'run');
-  const startIndex = Math.max(0, inProgressJobs.length - 12);
 
-  return inProgressJobs
-    .slice(startIndex)
-    .map(log => {
+  // Shuffle and pick random jobs for alerts
+  const shuffled = [...inProgressJobs].sort(() => Math.random() - 0.5);
+  const selectedJobs = shuffled.slice(0, 3); // Only 3 alerts
+
+  return selectedJobs
+    .map((log, index) => {
       // Determine severity based on waste predictions and risk factors
       let severity: 'high' | 'medium' | 'low' = 'low';
+      let actionTitle = '';
+      let message = '';
+
       if (log.predicted_dry_end_waste_pct > 3.5 || log.predicted_setup_waste_kg > 110) {
         severity = 'high';
+        const randomIndex = Math.floor(Math.random() * HIGH_PRIORITY_ALERTS.length);
+        actionTitle = HIGH_PRIORITY_ALERTS[randomIndex];
+        message = actionTitle;
       } else if (log.predicted_dry_end_waste_pct > 2.8 || log.predicted_setup_waste_kg > 90) {
         severity = 'medium';
+        const randomIndex = Math.floor(Math.random() * MEDIUM_PRIORITY_ALERTS.length);
+        actionTitle = MEDIUM_PRIORITY_ALERTS[randomIndex];
+        message = actionTitle;
+      } else {
+        severity = 'low';
+        const randomIndex = Math.floor(Math.random() * LOW_PRIORITY_ALERTS.length);
+        actionTitle = LOW_PRIORITY_ALERTS[randomIndex];
+        message = actionTitle;
       }
 
       // Ensure confidence is between 75-95% if NaN or invalid
@@ -391,18 +444,21 @@ export const getWasteAlerts = (): WasteAlert[] => {
       const jobName = `${log.paper_grade || 'Unknown'} - ${log.flute || 'C'}`;
 
       return {
-        id: log.trace_id,
+        id: log.trace_id + '_' + index,
         jobId: log.job_id,
         jobName: jobName,
         severity,
-        message: log.action_title,
+        message: message,
         timestamp: log.ts,
-        actionTitle: log.action_title,
+        actionTitle: actionTitle,
         confidence: confidence,
       };
     })
-    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-    .slice(0, 8);
+    .sort((a, b) => {
+      // Sort by severity: high > medium > low
+      const severityOrder = { high: 3, medium: 2, low: 1 };
+      return severityOrder[b.severity] - severityOrder[a.severity];
+    });
 };
 
 // Get KPI chart data with time series
