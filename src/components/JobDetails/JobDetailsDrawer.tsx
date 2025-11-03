@@ -75,8 +75,8 @@ export const JobDetailsDrawer: React.FC<JobDetailsDrawerProps> = ({ open, onClos
           <Descriptions column={1} size="small" bordered>
             <Descriptions.Item label="Job ID">{job.jobId}</Descriptions.Item>
             <Descriptions.Item label="Job Name">{job.jobName}</Descriptions.Item>
-            <Descriptions.Item label="Operator ID">
-              <Tag color="blue">{job.operatorId}</Tag>
+            <Descriptions.Item label="Quantity">
+              <Tag color="blue">{job.quantity} units</Tag>
             </Descriptions.Item>
             <Descriptions.Item label="Paper Grade">{job.paperGrade}</Descriptions.Item>
             <Descriptions.Item label="Flute Type">{job.flute}</Descriptions.Item>

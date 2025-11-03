@@ -81,7 +81,7 @@ export interface ActionStep {
 export interface CurrentJob {
   jobId: string;
   jobName: string;
-  operatorId: string;
+  quantity: number;
   completion: number;
   wasteRisk: number;
   paperGrade: string;

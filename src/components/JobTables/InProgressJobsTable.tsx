@@ -1,3 +1,39 @@
+/**
+ * InProgressJobsTable Component
+ *
+ * DATA SOURCES:
+ * ============
+ * This component displays job data from TWO sources:
+ *
+ * 1. REST API (http://localhost:5000/job-details?status=in-progress) - FETCHED ONCE
+ *    Provides:
+ *    - Job ID
+ *    - Paper Grade (flute, gsm)
+ *    - Production requirements (quantity)
+ *    - AI Recommendations (speed, temperature, etc.)
+ *    - Predicted waste values
+ *    - Job configuration details
+ *
+ * 2. WebSocket (ws://localhost:8080/ws/653/fctm2qrr/websocket) - REAL-TIME UPDATES
+ *    Provides:
+ *    - Progress (0-1 range) -> Converted to percentage for display
+ *    - Generated waste (kg)
+ *    - Current status
+ *
+ * MATCHING:
+ * =========
+ * Jobs are matched by ID:
+ * - REST API provides: job.job_id (e.g., "ed06effb-412d-4c68-b64e-819cab4a3595")
+ * - WebSocket provides: jobId (same format)
+ * - Matching happens in useRealTimeJobs hook before data reaches this component
+ *
+ * PROGRESS BARS:
+ * =============
+ * The horizontal progress bars show ONLY WebSocket data:
+ * - WebSocket sends: progress: 0.4775
+ * - Displayed as: 47.75% (after conversion in mapper)
+ * - Updates in REAL-TIME as WebSocket sends new values
+ */
 import React from 'react';
 import { Card, Table, Progress, Typography, Space, Tag, Button } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -64,8 +100,10 @@ export const InProgressJobsTable: React.FC<InProgressJobsTableProps> = ({
       key: 'completion',
       width: 150,
       render: (value: number) => (
+        // REAL-TIME PROGRESS FROM WEBSOCKET
+        // This value updates live as WebSocket sends new progress data with decimal precision
         <Space direction="vertical" size={0} style={{ width: '100%' }}>
-          <Text style={{ fontSize: 12 }}>{value}%</Text>
+          <Text style={{ fontSize: 12 }}>{value.toFixed(2)}%</Text>
           <Progress
             percent={value}
             size="small"

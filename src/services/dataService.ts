@@ -40,9 +40,6 @@ const OPERATORS = ['John Martinez', 'Sarah Chen', 'Michael Okonkwo', 'Priya Shar
 
 // Helper function to convert log to CurrentJob
 const convertToCurrentJob = (log: CorrugatorLog, index: number): CurrentJob => {
-  // Cycle through operators
-  const operator = OPERATORS[index % OPERATORS.length];
-
   // Parse action steps JSON and enhance with additional suggestions
   let actionSteps = [];
   try {
@@ -97,7 +94,7 @@ const convertToCurrentJob = (log: CorrugatorLog, index: number): CurrentJob => {
   return {
     jobId: log.job_id || `JOB-${index}`,
     jobName: `${log.paper_grade || 'Unknown'} - ${log.flute || 'C'}`,
-    operatorId: operator,
+    quantity: 300 + Math.floor(Math.random() * 1200), // Generate quantity between 300-1500
     completion: completion,
     wasteRisk: Math.min(safeNumber(log.predicted_dry_end_waste_pct) * 25, 100),
     paperGrade: log.paper_grade || 'Unknown',

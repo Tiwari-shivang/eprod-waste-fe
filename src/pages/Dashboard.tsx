@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Row, Col, Typography, Space, Modal } from 'antd';
+import { Layout, Row, Col, Typography, Space, Modal, Alert, Button } from 'antd';
 import { useNavigate } from 'react-router-dom';
+import { ReloadOutlined } from '@ant-design/icons';
 import { AppHeader } from '../components/Header';
 import { CurrentJobCard, AISuggestionsCard } from '../components/CurrentJob';
 import { KPISection } from '../components/KPISummary';
 import { HistoricalJobsTable, InProgressJobsTable, UpcomingJobsTable } from '../components/JobTables';
 import { JobDetailsDrawer } from '../components/JobDetails';
 import { dashboardAPI } from '../services/dataService';
+import { useRealTimeJobs } from '../hooks/useRealTimeJobs';
 import type { CurrentJob, HistoricalJob, InProgressJob, UpcomingJob, KPIChartData } from '../types';
 
 const { Content } = Layout;
@@ -14,6 +16,22 @@ const { Title } = Typography;
 
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
+
+  // Use real-time jobs hook for WebSocket + API integration
+  // Fetches job details ONCE on mount, then uses WebSocket for real-time progress updates
+  const {
+    currentJob: realTimeCurrentJob,
+    inProgressJobs: realTimeInProgressJobs,
+    allRunningJobs: realTimeRunningJobs,
+    isLoading: realTimeLoading,
+    isConnected,
+    error: realTimeError,
+    refreshJobs,
+  } = useRealTimeJobs({
+    enableWebSocket: true,
+    enableAutoRefresh: false, // Disabled - use WebSocket only for updates
+  });
+
   const [currentJob, setCurrentJob] = useState<CurrentJob | null>(null);
   const [historicalJobs, setHistoricalJobs] = useState<HistoricalJob[]>([]);
   const [inProgressJobs, setInProgressJobs] = useState<InProgressJob[]>([]);
@@ -25,21 +43,65 @@ export const Dashboard: React.FC = () => {
   const [allRunningJobs, setAllRunningJobs] = useState<CurrentJob[]>([]);
   const [inProgressModalOpen, setInProgressModalOpen] = useState(false);
   const [allInProgressJobs, setAllInProgressJobs] = useState<InProgressJob[]>([]);
+  const [useRealTimeData, setUseRealTimeData] = useState(true);
 
+  // Update state when real-time data changes
+  // This effect runs EVERY TIME WebSocket sends new data
   useEffect(() => {
-    // Fetch all running jobs once on mount
-    const fetchJobs = async () => {
+    if (useRealTimeData && !realTimeLoading) {
+      console.log('[Dashboard] 🔄 REAL-TIME UPDATE from WebSocket');
+      console.log('  - In-progress jobs:', realTimeInProgressJobs.length);
+      console.log('  - Sample progress:', realTimeInProgressJobs[0]?.completion + '%');
+
+      // IMPORTANT: Use ONLY real-time data (from REST API + WebSocket)
+      setAllRunningJobs(realTimeRunningJobs);
+      setInProgressJobs(realTimeInProgressJobs);  // This goes to KPISection → InProgressJobsTable
+      setAllInProgressJobs(realTimeInProgressJobs);  // This goes to Modal
+
+      // Set current job based on index
+      if (realTimeRunningJobs.length > 0) {
+        const newCurrentJob = realTimeRunningJobs[currentJobIndex] || realTimeRunningJobs[0];
+        console.log('  - Current job progress:', newCurrentJob.completion + '%');
+        setCurrentJob(newCurrentJob);
+      } else {
+        setCurrentJob(realTimeCurrentJob);
+      }
+
+      console.log('[Dashboard] ✅ UI state updated - components will re-render');
+    } else if (realTimeLoading) {
+      console.log('[Dashboard] Loading real-time data...');
+    }
+  }, [
+    realTimeCurrentJob,
+    realTimeInProgressJobs,
+    realTimeRunningJobs,
+    realTimeLoading,
+    useRealTimeData,
+    currentJobIndex,
+  ]);
+
+  // Fallback to mock data ONLY when user explicitly disables real-time data
+  useEffect(() => {
+    const fetchMockData = async () => {
+      console.log('[Dashboard] Using mock data (real-time disabled by user)');
       const [allJobs, allInProgress] = await Promise.all([
         dashboardAPI.getAllRunningJobs(),
         dashboardAPI.getAllInProgressJobs(),
       ]);
+
       setAllRunningJobs(allJobs);
-      setCurrentJob(allJobs[0] || null);
       setAllInProgressJobs(allInProgress);
+      setInProgressJobs(allInProgress.slice(0, 10));
+      setCurrentJob(allJobs[currentJobIndex] || allJobs[0] || null);
     };
 
-    fetchJobs();
-  }, []);
+    // ONLY use mock data if user explicitly disabled real-time
+    if (!useRealTimeData) {
+      fetchMockData();
+    }
+    // If useRealTimeData is true, we rely ONLY on realTimeInProgressJobs
+    // Even if it's empty, we show empty state (not mock data)
+  }, [useRealTimeData, currentJobIndex]);
 
   useEffect(() => {
     // Update current job when index changes
@@ -49,24 +111,24 @@ export const Dashboard: React.FC = () => {
   }, [currentJobIndex, allRunningJobs]);
 
   useEffect(() => {
-    // Fetch other data (not current job)
+    // Fetch other data (historical, upcoming, charts)
+    // NOTE: inProgressJobs comes from REST API + WebSocket, NOT from here!
     const fetchData = async () => {
-      const [historical, inProgress, upcoming, chart] = await Promise.all([
+      const [historical, upcoming, chart] = await Promise.all([
         dashboardAPI.getHistoricalJobs(),
-        dashboardAPI.getInProgressJobs(),
         dashboardAPI.getUpcomingJobs(),
         dashboardAPI.getKPIChartData(),
       ]);
 
       setHistoricalJobs(historical);
-      setInProgressJobs(inProgress);
+      // DO NOT set inProgressJobs here - it comes from useRealTimeJobs!
       setUpcomingJobs(upcoming);
       setChartData(chart);
     };
 
     fetchData();
 
-    // Simulate real-time updates every 5 seconds (excluding current job)
+    // Update historical/upcoming data every 5 seconds
     const interval = setInterval(fetchData, 5000);
 
     return () => clearInterval(interval);
@@ -110,6 +172,40 @@ export const Dashboard: React.FC = () => {
               AI-Driven Corrugator Waste Reduction Platform
             </Typography.Text>
           </div>
+
+          {/* WebSocket Status Indicator */}
+          {useRealTimeData && (
+            <Alert
+              message={
+                isConnected
+                  ? 'Hexaview XGBoost Regressor Optimization Model API is running - Real-time progress updates active'
+                  : realTimeError
+                  ? `WebSocket error: ${realTimeError.message}`
+                  : 'Connecting to WebSocket...'
+              }
+              description={
+                isConnected
+                  ? 'Job data loaded once. Progress bars update in real-time via WebSocket.'
+                  : null
+              }
+              type={isConnected ? 'success' : realTimeError ? 'error' : 'info'}
+              showIcon
+              closable
+              onClose={() => setUseRealTimeData(false)}
+              action={
+                isConnected ? (
+                  <Button
+                    size="small"
+                    icon={<ReloadOutlined />}
+                    onClick={() => refreshJobs()}
+                  >
+                    Refresh Data
+                  </Button>
+                ) : null
+              }
+              style={{ marginBottom: 16 }}
+            />
+          )}
 
           {/* Current Job and AI Suggestions */}
           <Row gutter={[16, 16]}>

@@ -6,6 +6,10 @@ export default defineConfig({
   plugins: [react()],
   assetsInclude: ['**/*.csv'],
   base: '/eprod-waste-fe/',
+  define: {
+    // Fix for sockjs-client: define global for browser environment
+    global: 'globalThis',
+  },
   build: {
     rollupOptions: {
       output: {

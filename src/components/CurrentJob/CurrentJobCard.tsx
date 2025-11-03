@@ -1,9 +1,26 @@
+/**
+ * CurrentJobCard Component
+ *
+ * DATA SOURCES:
+ * ============
+ * This component displays job data from TWO sources:
+ *
+ * 1. REST API (http://localhost:5000/job-details?status=in-progress) - FETCHED ONCE
+ *    - Job Name, Quantity, Paper Grade, Flute, Thickness
+ *    - AI Recommendations (speed, temperature)
+ *    - Predicted waste values
+ *
+ * 2. WebSocket (ws://localhost:8080/ws/653/fctm2qrr/websocket) - REAL-TIME
+ *    - Progress (0-1 range) -> Converted to 0-100% for display
+ *    - Generated waste (kg)
+ *
+ * The horizontal progress bar shows REAL-TIME WebSocket data ONLY.
+ */
 import React from 'react';
 import { Card, Row, Col, Button, Typography, Progress, Divider, Space } from 'antd';
 import {
   LeftOutlined,
   RightOutlined,
-  UserOutlined,
   FileTextOutlined,
   ExperimentOutlined,
   CompressOutlined,
@@ -76,24 +93,25 @@ export const CurrentJobCard: React.FC<CurrentJobCardProps> = ({
               </Space>
             </div>
 
-            {/* Operator ID */}
+            {/* Quantity */}
             <div style={{ padding: '14px', background: '#fafafa', borderRadius: 8, border: '1px solid #e8e8e8' }}>
               <Space align="center" size={10}>
-                <UserOutlined style={{ fontSize: 20, color: '#52c41a' }} />
+                <CompressOutlined style={{ fontSize: 20, color: '#52c41a' }} />
                 <div style={{ flex: 1 }}>
                   <Text type="secondary" style={{ fontSize: 13, display: 'block', marginBottom: 4 }}>
-                    Operator
+                    Quantity
                   </Text>
-                  <Text strong style={{ fontSize: 17, color: '#1f1f1f' }}>{job.operatorId}</Text>
+                  <Text strong style={{ fontSize: 17, color: '#1f1f1f' }}>{job.quantity} units</Text>
                 </div>
               </Space>
             </div>
 
-            {/* Progress Bar */}
+            {/* Progress Bar - REAL-TIME FROM WEBSOCKET */}
             <div style={{ padding: '16px', background: '#f0f7ff', borderRadius: 8, border: '1px solid #d6e4ff' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                 <Text strong style={{ fontSize: 15, color: '#1f1f1f' }}>Job Progress</Text>
-                <Text strong style={{ fontSize: 18, color: '#1677ff' }}>{job.completion}%</Text>
+                {/* job.completion comes from WebSocket (real-time updates with decimals) */}
+                <Text strong style={{ fontSize: 18, color: '#1677ff' }}>{job.completion.toFixed(2)}%</Text>
               </div>
               <Progress
                 percent={job.completion}
