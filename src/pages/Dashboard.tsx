@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Row, Col, Typography, Space, Modal, Alert, Button } from 'antd';
+import { Layout, Row, Col, Typography, Space, Modal, Alert, Button, message } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { ReloadOutlined } from '@ant-design/icons';
 import { AppHeader } from '../components/Header';
@@ -8,7 +8,9 @@ import { KPISection } from '../components/KPISummary';
 import { HistoricalJobsTable, InProgressJobsTable, UpcomingJobsTable } from '../components/JobTables';
 import { JobDetailsDrawer } from '../components/JobDetails';
 import { dashboardAPI } from '../services/dataService';
+import { apiService } from '../services/api.service';
 import { useRealTimeJobs } from '../hooks/useRealTimeJobs';
+import { useLoading } from '../contexts/LoadingContext';
 import type { CurrentJob, HistoricalJob, InProgressJob, UpcomingJob, KPIChartData } from '../types';
 
 const { Content } = Layout;
@@ -16,6 +18,7 @@ const { Title } = Typography;
 
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
+  const { showLoader, hideLoader, updateProgress } = useLoading();
 
   // Use real-time jobs hook for WebSocket + API integration
   // Fetches job details ONCE on mount, then uses WebSocket for real-time progress updates
@@ -44,6 +47,7 @@ export const Dashboard: React.FC = () => {
   const [inProgressModalOpen, setInProgressModalOpen] = useState(false);
   const [allInProgressJobs, setAllInProgressJobs] = useState<InProgressJob[]>([]);
   const [useRealTimeData, setUseRealTimeData] = useState(true);
+  const [appliedSettingsMap, setAppliedSettingsMap] = useState<Record<string, boolean>>({});
 
   // Update state when real-time data changes
   // This effect runs EVERY TIME WebSocket sends new data
@@ -54,13 +58,19 @@ export const Dashboard: React.FC = () => {
       console.log('  - Sample progress:', realTimeInProgressJobs[0]?.completion + '%');
 
       // IMPORTANT: Use ONLY real-time data (from REST API + WebSocket)
-      setAllRunningJobs(realTimeRunningJobs);
+      // Apply the appliedSettings flag from our local state
+      const jobsWithAppliedSettings = realTimeRunningJobs.map(job => ({
+        ...job,
+        appliedSettings: appliedSettingsMap[job.jobId] || false
+      }));
+
+      setAllRunningJobs(jobsWithAppliedSettings);
       setInProgressJobs(realTimeInProgressJobs);  // This goes to KPISection → InProgressJobsTable
       setAllInProgressJobs(realTimeInProgressJobs);  // This goes to Modal
 
       // Set current job based on index
-      if (realTimeRunningJobs.length > 0) {
-        const newCurrentJob = realTimeRunningJobs[currentJobIndex] || realTimeRunningJobs[0];
+      if (jobsWithAppliedSettings.length > 0) {
+        const newCurrentJob = jobsWithAppliedSettings[currentJobIndex] || jobsWithAppliedSettings[0];
         console.log('  - Current job progress:', newCurrentJob.completion + '%');
         setCurrentJob(newCurrentJob);
       } else {
@@ -78,6 +88,7 @@ export const Dashboard: React.FC = () => {
     realTimeLoading,
     useRealTimeData,
     currentJobIndex,
+    appliedSettingsMap,
   ]);
 
   // Fallback to mock data ONLY when user explicitly disables real-time data
@@ -158,6 +169,98 @@ export const Dashboard: React.FC = () => {
     }
   };
 
+  const handleApplySettings = (jobId: string) => {
+    // Mark this job as having applied settings
+    setAppliedSettingsMap(prev => ({
+      ...prev,
+      [jobId]: true
+    }));
+
+    // Recalculate waste risk to 10-20% range for applied settings
+    const newWasteRisk = 10 + Math.random() * 10;
+
+    // Update current job if it matches
+    if (currentJob?.jobId === jobId) {
+      setCurrentJob(prev => prev ? {
+        ...prev,
+        appliedSettings: true,
+        wasteRisk: newWasteRisk
+      } : null);
+    }
+
+    // Update all running jobs
+    setAllRunningJobs(prev =>
+      prev.map(job =>
+        job.jobId === jobId ? {
+          ...job,
+          appliedSettings: true,
+          wasteRisk: newWasteRisk
+        } : job
+      )
+    );
+  };
+
+  const handlePauseJob = async (jobId: string) => {
+    const job = allRunningJobs.find(j => j.jobId === jobId);
+    if (!job) return;
+
+    const isPaused = job.eventType === 'paused';
+    const newStatus = isPaused ? 'in-progress' : 'paused';
+    const actionText = isPaused ? 'Resuming' : 'Pausing';
+
+    // Show loader immediately
+    showLoader(`${actionText} Job ${jobId}...`);
+
+    // Simulate smooth progress
+    let progress = 0;
+    const progressInterval = setInterval(() => {
+      progress += 2;
+      if (progress <= 90) {
+        updateProgress(progress);
+      }
+    }, 50); // Update every 50ms for smooth animation
+
+    try {
+      const response = await apiService.updateJob(jobId, {
+        length: parseFloat(job.thickness) || 0,
+        width: 100,
+        gsm: parseFloat(job.paperGrade.split('-')[1]?.trim()) || 0,
+        printing: 1,
+        quantity: job.quantity,
+        flute: job.flute,
+        shift: 'Day',
+        experience: 'High',
+        status: newStatus
+      });
+
+      // Complete the progress
+      clearInterval(progressInterval);
+      updateProgress(100);
+
+      // Small delay to show 100% completion
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      if (response.success) {
+        message.success(isPaused ? 'Job resumed successfully!' : 'Job paused successfully!');
+        // Refresh jobs to get updated status
+        await refreshJobs();
+      } else {
+        message.error(`Failed to ${isPaused ? 'resume' : 'pause'} job`);
+      }
+    } catch (error) {
+      clearInterval(progressInterval);
+      console.error('Error pausing/resuming job:', error);
+      message.error(`Failed to ${isPaused ? 'resume' : 'pause'} job`);
+    } finally {
+      hideLoader();
+    }
+  };
+
+  const handleJobUpdated = async () => {
+    // Refresh jobs after update
+    await refreshJobs();
+  };
+
   return (
     <Layout style={{ minHeight: '100vh', background: '#f0f2f5' }}>
       <AppHeader />
@@ -218,11 +321,17 @@ export const Dashboard: React.FC = () => {
                   onNextJob={handleNextJob}
                   currentIndex={currentJobIndex}
                   totalJobs={allRunningJobs.length}
+                  onPauseJob={handlePauseJob}
                 />
               )}
             </Col>
             <Col xs={24} lg={6}>
-              {currentJob && <AISuggestionsCard job={currentJob} />}
+              {currentJob && (
+                <AISuggestionsCard
+                  job={currentJob}
+                  onApplySettings={handleApplySettings}
+                />
+              )}
             </Col>
           </Row>
 
@@ -260,6 +369,7 @@ export const Dashboard: React.FC = () => {
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         job={currentJob}
+        onJobUpdated={handleJobUpdated}
       />
 
       {/* In-Progress Jobs Modal */}

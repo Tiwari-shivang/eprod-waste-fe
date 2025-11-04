@@ -10,6 +10,8 @@ import { AnalyticsPage } from './pages/AnalyticsPage';
 import { InProgressPage } from './pages/InProgressPage';
 import { UpcomingPage } from './pages/UpcomingPage';
 import { AlertsPage } from './pages/AlertsPage';
+import { LoadingProvider } from './contexts/LoadingContext';
+import { FullScreenLoader } from './components/FullScreenLoader';
 
 const wasteAlerts = [
   'High waste detected on Line 2 - Job #JOB-2847. AI suggests reducing speed to 165 m/min.',
@@ -51,30 +53,33 @@ function App() {
   }, []);
 
   return (
-    <ConfigProvider theme={antdTheme}>
-      <BrowserRouter basename="/eprod-waste-fe">
-        <ToastContainer
-          position="top-right"
-          autoClose={8000}
-          hideProgressBar={false}
-          newestOnTop={true}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="light"
-        />
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/in-progress" element={<InProgressPage />} />
-          <Route path="/upcoming" element={<UpcomingPage />} />
-          <Route path="/historical-data" element={<HistoricalDataPage />} />
-          <Route path="/analytics" element={<AnalyticsPage />} />
-          <Route path="/alerts" element={<AlertsPage />} />
-        </Routes>
-      </BrowserRouter>
-    </ConfigProvider>
+    <LoadingProvider>
+      <ConfigProvider theme={antdTheme}>
+        <BrowserRouter basename="/eprod-waste-fe">
+          <FullScreenLoader />
+          <ToastContainer
+            position="top-right"
+            autoClose={8000}
+            hideProgressBar={false}
+            newestOnTop={true}
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            theme="light"
+          />
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/in-progress" element={<InProgressPage />} />
+            <Route path="/upcoming" element={<UpcomingPage />} />
+            <Route path="/historical-data" element={<HistoricalDataPage />} />
+            <Route path="/analytics" element={<AnalyticsPage />} />
+            <Route path="/alerts" element={<AlertsPage />} />
+          </Routes>
+        </BrowserRouter>
+      </ConfigProvider>
+    </LoadingProvider>
   );
 }
 

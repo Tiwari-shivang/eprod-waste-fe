@@ -33,12 +33,33 @@ export interface PredictResponse {
 export interface JobStatus {
   id: string;
   jobId: string;
-  currentStatus: 'in-progress' | 'completed' | 'pending';
+  currentStatus: 'in-progress' | 'completed' | 'pending' | 'paused';
   generatedWaste: number;
   timeTaken: number | null;
   startTime: string | null;
   endTime: string | null;
   progress: number; // 0-1 range from API
+}
+
+export interface UpdateJobRequest {
+  length: number;
+  width: number;
+  gsm: number;
+  printing: number;
+  quantity: number;
+  flute: string;
+  shift: string;
+  experience: string;
+  status?: 'in-progress' | 'paused' | 'completed';
+}
+
+export interface UpdateJobResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    job_id: string;
+    updated_fields: string[];
+  };
 }
 
 export interface JobRecommendations {

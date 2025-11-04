@@ -17,13 +17,15 @@
  * The horizontal progress bar shows REAL-TIME WebSocket data ONLY.
  */
 import React from 'react';
-import { Card, Row, Col, Button, Typography, Progress, Divider, Space } from 'antd';
+import { Card, Row, Col, Button, Typography, Progress, Divider, Space, Tag } from 'antd';
 import {
   LeftOutlined,
   RightOutlined,
   FileTextOutlined,
   ExperimentOutlined,
   CompressOutlined,
+  PauseCircleOutlined,
+  PlayCircleOutlined,
 } from '@ant-design/icons';
 import { WasteRiskMeter } from '../shared';
 import type { CurrentJob } from '../../types';
@@ -37,6 +39,7 @@ interface CurrentJobCardProps {
   onNextJob?: () => void;
   currentIndex?: number;
   totalJobs?: number;
+  onPauseJob?: (jobId: string) => void;
 }
 
 export const CurrentJobCard: React.FC<CurrentJobCardProps> = ({
@@ -46,14 +49,28 @@ export const CurrentJobCard: React.FC<CurrentJobCardProps> = ({
   onNextJob,
   currentIndex = 0,
   totalJobs = 1,
+  onPauseJob,
 }) => {
+  const isPaused = job.eventType === 'paused';
   return (
     <Card
       title={
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Title level={3} style={{ margin: 0, fontSize: 24, fontWeight: 600 }}>
-            Current Job
-          </Title>
+          <Space size={12} align="center">
+            <Title level={3} style={{ margin: 0, fontSize: 24, fontWeight: 600 }}>
+              Current Job
+            </Title>
+            {isPaused && (
+              <Tag color="warning" style={{ fontSize: 14, padding: '4px 12px' }}>
+                PAUSED - Editable
+              </Tag>
+            )}
+            {!isPaused && (
+              <Tag color="processing" style={{ fontSize: 14, padding: '4px 12px' }}>
+                IN-PROGRESS
+              </Tag>
+            )}
+          </Space>
           <Space size={12}>
             <Button
               icon={<LeftOutlined />}
@@ -172,15 +189,34 @@ export const CurrentJobCard: React.FC<CurrentJobCardProps> = ({
               </Row>
             </div>
 
-            <Button
-              type="primary"
-              onClick={onViewDetails}
-              block
-              size="large"
-              style={{ marginTop: 16, height: 48, fontSize: 16, fontWeight: 500 }}
-            >
-              View Job Details
-            </Button>
+            <Row gutter={[12, 12]} style={{ marginTop: 16 }}>
+              <Col span={onPauseJob ? 12 : 24}>
+                <Button
+                  type="primary"
+                  onClick={onViewDetails}
+                  block
+                  size="large"
+                  style={{ height: 48, fontSize: 16, fontWeight: 500 }}
+                >
+                  View Job Details
+                </Button>
+              </Col>
+              {onPauseJob && (
+                <Col span={12}>
+                  <Button
+                    icon={isPaused ? <PlayCircleOutlined /> : <PauseCircleOutlined />}
+                    onClick={() => onPauseJob(job.jobId)}
+                    block
+                    size="large"
+                    danger={!isPaused}
+                    type={isPaused ? 'primary' : 'default'}
+                    style={{ height: 48, fontSize: 16, fontWeight: 500 }}
+                  >
+                    {isPaused ? 'Resume' : 'Pause'}
+                  </Button>
+                </Col>
+              )}
+            </Row>
           </div>
         </Col>
 

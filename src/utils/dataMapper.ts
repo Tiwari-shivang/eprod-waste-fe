@@ -109,12 +109,17 @@ export const mapApiJobToInProgressJob = (
  * Map API job data from InProgressJobsResponse to UI CurrentJob type
  */
 export const mapApiJobToCurrentJob = (
-  apiJob: InProgressJobsResponse['data'][0]
+  apiJob: InProgressJobsResponse['data'][0],
+  appliedSettings?: boolean
 ): CurrentJob => {
   const { job, status } = apiJob;
 
-  // Random waste risk between 25-50 for CurrentJob display
-  const wasteRisk = 25 + Math.random() * 25; // Random between 25-50
+  // Waste risk based on whether AI settings are applied
+  // Applied settings: 10-20% (optimized)
+  // Not applied: 25-50% (standard)
+  const wasteRisk = appliedSettings
+    ? 10 + Math.random() * 10  // Random between 10-20
+    : 25 + Math.random() * 25; // Random between 25-50
 
   // Generate a readable job name from job ID
   const jobName = `Job ${job.job_id.substring(0, 8).toUpperCase()}`;
@@ -134,7 +139,7 @@ export const mapApiJobToCurrentJob = (
     jobName,
     quantity: job.quantity,
     completion: progressPercent,                          // WEBSOCKET with decimal precision
-    wasteRisk,                                            // Random 25-50
+    wasteRisk,                                            // 10-20% if applied, 25-50% if not
     paperGrade: `${job.flute} - ${job.gsm}gsm`,
     flute: job.flute,
     thickness: `${job.length}mm`,
@@ -160,6 +165,7 @@ export const mapApiJobToCurrentJob = (
         step: `Monitor ${job.flute} flute handling carefully`,
       },
     ],
+    appliedSettings, // Track if settings have been applied
   };
 };
 

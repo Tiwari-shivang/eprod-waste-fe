@@ -91,10 +91,11 @@ export interface CurrentJob {
   predictedDryEndWaste: number;
   speed: number;
   steam: number;
-  eventType: string;
+  eventType: string; // 'in-progress' | 'paused'
   actionConfidence: number;
   actionTitle: string;
   actionSteps: ActionStep[];
+  appliedSettings?: boolean; // Track if AI settings have been applied
 }
 
 export interface HistoricalJob {

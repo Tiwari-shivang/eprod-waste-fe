@@ -1,15 +1,37 @@
-import React from 'react';
-import { Card, Typography, List, Space, Tag } from 'antd';
-import { BulbOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import React, { useState, useEffect } from 'react';
+import { Card, Typography, List, Space, Tag, Checkbox, Button, message } from 'antd';
+import { BulbOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import type { CurrentJob } from '../../types';
 
 const { Title, Text, Paragraph } = Typography;
 
 interface AISuggestionsCardProps {
   job: CurrentJob;
+  onApplySettings?: (jobId: string) => void;
 }
 
-export const AISuggestionsCard: React.FC<AISuggestionsCardProps> = ({ job }) => {
+export const AISuggestionsCard: React.FC<AISuggestionsCardProps> = ({
+  job,
+  onApplySettings
+}) => {
+  const [checkedSteps, setCheckedSteps] = useState<Record<number, boolean>>({});
+  const [isApplying, setIsApplying] = useState(false);
+
+  // Initialize checkboxes based on whether settings are already applied
+  useEffect(() => {
+    if (job.appliedSettings) {
+      // If settings already applied, check all boxes
+      const allChecked: Record<number, boolean> = {};
+      job.actionSteps?.forEach((_, index) => {
+        allChecked[index] = true;
+      });
+      setCheckedSteps(allChecked);
+    } else {
+      // Reset checkboxes
+      setCheckedSteps({});
+    }
+  }, [job.appliedSettings, job.actionSteps]);
+
   const formatSuggestion = (step: any): string => {
     let suggestion = step.step || 'No step description';
 
@@ -28,23 +50,66 @@ export const AISuggestionsCard: React.FC<AISuggestionsCardProps> = ({ job }) => 
     return suggestion;
   };
 
+  const handleCheckboxChange = (index: number, checked: boolean) => {
+    setCheckedSteps(prev => ({
+      ...prev,
+      [index]: checked
+    }));
+  };
+
+  const allStepsChecked = job.actionSteps?.every((_, index) => checkedSteps[index]) ?? false;
+
+  const handleApplySettings = async () => {
+    setIsApplying(true);
+
+    try {
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Call the callback to update the job
+      if (onApplySettings) {
+        onApplySettings(job.jobId);
+      }
+
+      message.success({
+        content: 'AI settings applied successfully! Waste risk reduced to optimal range.',
+        duration: 3,
+      });
+    } catch (error) {
+      message.error('Failed to apply settings. Please try again.');
+    } finally {
+      setIsApplying(false);
+    }
+  };
+
   return (
     <Card
       bordered={false}
       style={{
         height: '100%',
-        background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
-        boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)'
+        background: job.appliedSettings
+          ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' // Green gradient for applied
+          : 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)', // Blue gradient for pending
+        boxShadow: job.appliedSettings
+          ? '0 4px 12px rgba(16, 185, 129, 0.25)'
+          : '0 4px 12px rgba(37, 99, 235, 0.25)'
       }}
     >
       <Space direction="vertical" size={16} style={{ width: '100%' }}>
         <div style={{ textAlign: 'center' }}>
-          <BulbOutlined style={{ fontSize: 40, color: '#fff', marginBottom: 12 }} />
+          {job.appliedSettings ? (
+            <ThunderboltOutlined style={{ fontSize: 40, color: '#fff', marginBottom: 12 }} />
+          ) : (
+            <BulbOutlined style={{ fontSize: 40, color: '#fff', marginBottom: 12 }} />
+          )}
           <Title level={4} style={{ margin: 0, color: '#fff' }}>
-            AI Suggestions
+            {job.appliedSettings ? 'Settings Applied' : 'AI Suggestions'}
           </Title>
           <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.85)' }}>
-            Minimize Waste with AI Insights
+            {job.appliedSettings
+              ? 'Optimized for Minimal Waste'
+              : 'Minimize Waste with AI Insights'
+            }
           </Text>
         </div>
 
@@ -86,12 +151,24 @@ export const AISuggestionsCard: React.FC<AISuggestionsCardProps> = ({ job }) => 
             <List
               size="small"
               dataSource={job.actionSteps}
-              renderItem={(step) => (
+              renderItem={(step, index) => (
                 <List.Item style={{ padding: '8px 0', border: 'none' }}>
-                  <Space align="start" size={8}>
-                    <CheckCircleOutlined style={{ color: '#52c41a', fontSize: 16, marginTop: 2 }} />
-                    <div>
-                      <Text style={{ fontSize: 12, color: '#1f1f1f' }}>
+                  <Space align="start" size={8} style={{ width: '100%' }}>
+                    <Checkbox
+                      checked={checkedSteps[index] || false}
+                      onChange={(e) => handleCheckboxChange(index, e.target.checked)}
+                      disabled={job.appliedSettings}
+                      style={{ marginTop: 2 }}
+                    />
+                    <div style={{ flex: 1 }}>
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          color: '#1f1f1f',
+                          textDecoration: checkedSteps[index] ? 'line-through' : 'none',
+                          opacity: checkedSteps[index] ? 0.6 : 1
+                        }}
+                      >
                         {formatSuggestion(step)}
                       </Text>
                     </div>
@@ -99,6 +176,45 @@ export const AISuggestionsCard: React.FC<AISuggestionsCardProps> = ({ job }) => 
                 </List.Item>
               )}
             />
+
+            {!job.appliedSettings && (
+              <Button
+                type="primary"
+                block
+                size="large"
+                disabled={!allStepsChecked}
+                loading={isApplying}
+                onClick={handleApplySettings}
+                icon={<ThunderboltOutlined />}
+                style={{
+                  marginTop: 16,
+                  height: 44,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  background: allStepsChecked
+                    ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                    : undefined,
+                  border: 'none',
+                }}
+              >
+                Apply Settings
+              </Button>
+            )}
+
+            {job.appliedSettings && (
+              <div style={{
+                marginTop: 16,
+                padding: 12,
+                background: '#f0fdf4',
+                border: '1px solid #86efac',
+                borderRadius: 6,
+                textAlign: 'center'
+              }}>
+                <Text style={{ fontSize: 12, color: '#166534', fontWeight: 500 }}>
+                  ✓ All settings have been applied successfully
+                </Text>
+              </div>
+            )}
           </div>
         )}
 
@@ -109,7 +225,10 @@ export const AISuggestionsCard: React.FC<AISuggestionsCardProps> = ({ job }) => 
           textAlign: 'center'
         }}>
           <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)' }}>
-            These recommendations are generated by our AI model to optimize production and reduce waste
+            {job.appliedSettings
+              ? 'AI-optimized settings are now active for this job'
+              : 'Check all steps and apply settings to optimize production'
+            }
           </Text>
         </div>
       </Space>

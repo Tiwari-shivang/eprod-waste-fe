@@ -51,21 +51,36 @@ export const useRealTimeJobs = (
   });
 
   /**
-   * Fetch all in-progress jobs from API
+   * Fetch all jobs (in-progress and paused) from API
+   * Uses /job-details endpoint without status filter to get ALL jobs
    */
   const fetchInProgressJobs = useCallback(async () => {
     try {
       setIsLoading(true);
-      const response = await apiService.getInProgressJobs();
 
-      if (response.success && response.data) {
-        setApiJobsData(response.data);
+      // Fetch ALL jobs using base endpoint: /job-details (no status filter)
+      // This returns both in-progress and paused jobs
+      const response = await apiService.getAllJobs();
+
+      const allJobs = response.success && response.data ? response.data : [];
+
+      // Separate jobs by status for logging
+      const inProgressJobs = allJobs.filter(job => job.status.current_status === 'in-progress');
+      const pausedJobs = allJobs.filter(job => job.status.current_status === 'paused');
+
+      console.log('[useRealTimeJobs] 📥 Fetched ALL jobs from /job-details:');
+      console.log('  - In-progress:', inProgressJobs.length);
+      console.log('  - Paused:', pausedJobs.length);
+      console.log('  - Total jobs:', allJobs.length);
+
+      if (allJobs.length > 0 || response.success) {
+        setApiJobsData(allJobs);
         setError(null);
       } else {
-        throw new Error('Failed to fetch in-progress jobs');
+        throw new Error('Failed to fetch jobs');
       }
     } catch (err) {
-      console.error('Error fetching in-progress jobs:', err);
+      console.error('Error fetching jobs:', err);
       setError(err instanceof Error ? err : new Error('Failed to fetch jobs'));
     } finally {
       setIsLoading(false);
@@ -132,8 +147,8 @@ export const useRealTimeJobs = (
     const mappedInProgressJobs = mergedJobs.map(mapApiJobToInProgressJob);
     setInProgressJobs(mappedInProgressJobs);
 
-    // Map to CurrentJob type
-    const mappedRunningJobs = mergedJobs.map(mapApiJobToCurrentJob);
+    // Map to CurrentJob type (appliedSettings will be managed by Dashboard component)
+    const mappedRunningJobs = mergedJobs.map(job => mapApiJobToCurrentJob(job, false));
     setAllRunningJobs(mappedRunningJobs);
 
     // Set first job as current

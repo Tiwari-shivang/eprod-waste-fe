@@ -1,0 +1,37 @@
+.fullscreen-loader-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  backdrop-filter: blur(4px);
+}
+
+.fullscreen-loader-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  min-width: 400px;
+}
+
+.fullscreen-loader-overlay .ant-spin-dot-item {
+  background-color: #fff;
+}
+
+.fullscreen-loader-content .ant-progress-text {
+  color: #fff !important;
+  font-weight: 600;
+  font-size: 16px;
+}
