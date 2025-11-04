@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { Card, Typography, List, Space, Tag, Checkbox, Button, message } from 'antd';
 import { BulbOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import type { CurrentJob } from '../../types';
@@ -10,7 +10,7 @@ interface AISuggestionsCardProps {
   onApplySettings?: (jobId: string) => void;
 }
 
-export const AISuggestionsCard: React.FC<AISuggestionsCardProps> = ({
+const AISuggestionsCardComponent: React.FC<AISuggestionsCardProps> = ({
   job,
   onApplySettings
 }) => {
@@ -235,3 +235,18 @@ export const AISuggestionsCard: React.FC<AISuggestionsCardProps> = ({
     </Card>
   );
 };
+
+// Memoize component to prevent unnecessary re-renders
+// Only re-render when job.jobId, job.appliedSettings, or job.actionSteps change
+export const AISuggestionsCard = memo(AISuggestionsCardComponent, (prevProps, nextProps) => {
+  // Return true if props are equal (don't re-render)
+  // Return false if props are different (re-render)
+  return (
+    prevProps.job.jobId === nextProps.job.jobId &&
+    prevProps.job.appliedSettings === nextProps.job.appliedSettings &&
+    prevProps.job.actionConfidence === nextProps.job.actionConfidence &&
+    prevProps.job.actionTitle === nextProps.job.actionTitle &&
+    JSON.stringify(prevProps.job.actionSteps) === JSON.stringify(nextProps.job.actionSteps) &&
+    prevProps.onApplySettings === nextProps.onApplySettings
+  );
+});

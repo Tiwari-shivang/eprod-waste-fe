@@ -96,7 +96,7 @@ const convertToCurrentJob = (log: CorrugatorLog, index: number): CurrentJob => {
     jobName: `${log.paper_grade || 'Unknown'} - ${log.flute || 'C'}`,
     quantity: 300 + Math.floor(Math.random() * 1200), // Generate quantity between 300-1500
     completion: completion,
-    wasteRisk: Math.min(safeNumber(log.predicted_dry_end_waste_pct) * 25, 100),
+    wasteRisk: Math.min(70, Math.max(50, 50 + Math.random() * 20)), // Constrained between 50-70% for jobs without AI settings
     paperGrade: log.paper_grade || 'Unknown',
     flute: log.flute || 'C',
     thickness: `${log.paper_grade?.match(/\d+/)?.[0] || '140'}gsm`,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Layout, Row, Col, Typography, Space, Modal, Alert, Button, message } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { ReloadOutlined } from '@ant-design/icons';
@@ -59,10 +59,26 @@ export const Dashboard: React.FC = () => {
 
       // IMPORTANT: Use ONLY real-time data (from REST API + WebSocket)
       // Apply the appliedSettings flag from our local state
-      const jobsWithAppliedSettings = realTimeRunningJobs.map(job => ({
-        ...job,
-        appliedSettings: appliedSettingsMap[job.jobId] || false
-      }));
+      // Ensure waste risk stays within correct ranges based on AI settings
+      const jobsWithAppliedSettings = realTimeRunningJobs.map(job => {
+        const hasAppliedSettings = appliedSettingsMap[job.jobId] || false;
+        let wasteRisk = job.wasteRisk;
+
+        // Enforce waste risk constraints
+        if (hasAppliedSettings) {
+          // AI settings applied: ensure waste risk is between 15-35% (never exceed 35%)
+          wasteRisk = Math.min(35, Math.max(15, wasteRisk));
+        } else {
+          // AI settings not applied: ensure waste risk is between 50-70%
+          wasteRisk = Math.min(70, Math.max(50, wasteRisk));
+        }
+
+        return {
+          ...job,
+          appliedSettings: hasAppliedSettings,
+          wasteRisk
+        };
+      });
 
       setAllRunningJobs(jobsWithAppliedSettings);
       setInProgressJobs(realTimeInProgressJobs);  // This goes to KPISection → InProgressJobsTable
@@ -169,24 +185,28 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  const handleApplySettings = (jobId: string) => {
+  const handleApplySettings = useCallback((jobId: string) => {
     // Mark this job as having applied settings
     setAppliedSettingsMap(prev => ({
       ...prev,
       [jobId]: true
     }));
 
-    // Recalculate waste risk to 10-20% range for applied settings
-    const newWasteRisk = 10 + Math.random() * 10;
+    // Recalculate waste risk to 15-35% range for applied settings
+    // Ensure it NEVER exceeds 35%
+    const newWasteRisk = Math.min(35, 15 + Math.random() * 20);
 
     // Update current job if it matches
-    if (currentJob?.jobId === jobId) {
-      setCurrentJob(prev => prev ? {
-        ...prev,
-        appliedSettings: true,
-        wasteRisk: newWasteRisk
-      } : null);
-    }
+    setCurrentJob(prev => {
+      if (prev?.jobId === jobId) {
+        return {
+          ...prev,
+          appliedSettings: true,
+          wasteRisk: newWasteRisk
+        };
+      }
+      return prev;
+    });
 
     // Update all running jobs
     setAllRunningJobs(prev =>
@@ -198,7 +218,7 @@ export const Dashboard: React.FC = () => {
         } : job
       )
     );
-  };
+  }, []);
 
   const handlePauseJob = async (jobId: string) => {
     const job = allRunningJobs.find(j => j.jobId === jobId);

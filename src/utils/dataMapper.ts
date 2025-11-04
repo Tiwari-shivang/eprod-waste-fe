@@ -3,15 +3,21 @@ import type { InProgressJob, CurrentJob } from '../types';
 
 /**
  * Calculate waste risk percentage based on generated waste and predicted waste
- * Returns a value between 0-100
+ * Returns a value between 0-100, with constraints based on AI settings application
+ *
+ * @param generatedWaste - Current generated waste
+ * @param predictedWaste - Predicted waste value
+ * @param appliedSettings - Whether AI settings have been applied (default: false)
+ * @returns Waste risk percentage (15-35% if applied, 50-70% if not applied)
  */
 export const calculateWasteRisk = (
   generatedWaste: number,
-  predictedWaste: number
+  predictedWaste: number,
+  appliedSettings: boolean = false
 ): number => {
   if (!predictedWaste || predictedWaste === 0) {
-    // If no prediction, use a moderate risk level
-    return 50;
+    // If no prediction, use range based on settings
+    return appliedSettings ? (15 + Math.random() * 20) : (50 + Math.random() * 20);
   }
 
   // Calculate risk as percentage over prediction
@@ -20,7 +26,16 @@ export const calculateWasteRisk = (
   // Normalize to 0-100 scale
   // If generated waste is equal to predicted, risk is 50%
   // If it's 2x predicted, risk is 100%
-  const risk = Math.min(100, Math.max(0, (riskRatio - 50) * 2 + 50));
+  let risk = Math.min(100, Math.max(0, (riskRatio - 50) * 2 + 50));
+
+  // Apply constraints based on AI settings
+  if (appliedSettings) {
+    // AI settings applied: waste risk must be between 15-35% (never exceed 35%)
+    risk = Math.min(35, Math.max(15, risk * 0.35)); // Scale down to 15-35% range
+  } else {
+    // AI settings not applied: waste risk must be between 50-70%
+    risk = Math.min(70, Math.max(50, 50 + (risk * 0.20))); // Scale to 50-70% range
+  }
 
   return risk;
 };
@@ -115,11 +130,11 @@ export const mapApiJobToCurrentJob = (
   const { job, status } = apiJob;
 
   // Waste risk based on whether AI settings are applied
-  // Applied settings: 10-20% (optimized)
-  // Not applied: 25-50% (standard)
+  // Applied settings: 15-35% (optimized) - NEVER exceeds 35%
+  // Not applied: 50-70% (standard)
   const wasteRisk = appliedSettings
-    ? 10 + Math.random() * 10  // Random between 10-20
-    : 25 + Math.random() * 25; // Random between 25-50
+    ? Math.min(35, 15 + Math.random() * 20)  // Random between 15-35, capped at 35%
+    : Math.min(70, Math.max(50, 50 + Math.random() * 20)); // Random between 50-70
 
   // Generate a readable job name from job ID
   const jobName = `Job ${job.job_id.substring(0, 8).toUpperCase()}`;
